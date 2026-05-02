@@ -10,13 +10,22 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+function getSiteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
 export const metadata: Metadata = {
   title: "SF Housing — reviews, threads, and roommates",
   description:
     "Reddit-style forum for finding housing in San Francisco. Reviews of every neighborhood, roommate threads, and where-to-live planning for students and post-grads.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
+  metadataBase: new URL(getSiteUrl()),
 };
 
 export default function RootLayout({
