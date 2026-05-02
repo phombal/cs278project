@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------------- */
+/* Tailwind v4 design tokens — see .cursorrules for the full system          */
+/* ------------------------------------------------------------------------- */
+@theme {
+  /* Brand */
+  --color-violet: #533afd;
+  --color-violet-soft: #8087ff;
+  --color-violet-washed: #b9b9f9;
+
+  /* Neutrals */
+  --color-ink: #061b31;
+  --color-slate: #50617a;
+  --color-ghost: #64748d;
+  --color-stone: #d8d6df;
+  --color-powder: #e5edf5;
+  --color-porcelain: #f8fafd;
+  --color-platinum: #ffffff;
+
+  /* Semantic */
+  --color-success: #81b81a;
+  --color-warning: #ff6118;
+  --color-danger: #c0392b;
+  --color-fuchsia: #ff2ede;
+
+  /* Type */
+  --font-sans: "Inter", "Söhne", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Source Code Pro", ui-monospace, SFMono-Regular,
+    Menlo, Consolas, monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* Shadows */
+  --shadow-soft: 0 3px 6px 0 rgb(23 23 23 / 0.06);
+  --shadow-pop: 0 16px 32px 0 rgb(50 50 93 / 0.12);
+  --shadow-lift: 0 8px 16px 0 rgb(50 50 93 / 0.08);
+  --shadow-glow: 0 0 32px 8px rgb(83 58 253 / 0.20);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Decorative gradients — hero / marketing surfaces only                     */
+/* ------------------------------------------------------------------------- */
+:root {
+  --gradient-sunburst: linear-gradient(90deg, #7232f1 3.13%, #fb76fa 50%, #ffcf5e);
+  --gradient-dreamy: radial-gradient(circle, #7f7dfc, #f44bcc 33%, #e5edf5 66%);
+  --gradient-fuchsia-glow: linear-gradient(0deg, #ff2ede, #d298ff);
+  --ring-focus: 0 0 0 2px rgb(83 58 253 / 0.40);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Base                                                                      */
+/* ------------------------------------------------------------------------- */
+@layer base {
+  html,
+  body {
+    background: var(--color-platinum);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01" on, "tnum" on, "cv11" on;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(83 58 253 / 0.20);
+    color: var(--color-ink);
+  }
+
+  /* Always-visible focus ring for keyboard users (never remove). */
+  *:focus-visible {
+    outline: none;
+    box-shadow: var(--ring-focus);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Light heading weights, tight tracking — per .cursorrules §3 */
+  h1, h2, h3 {
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  h1 { font-size: 2.75rem; line-height: 1.07; letter-spacing: -0.025em; } /* 44 */
+  h2 { font-size: 2rem;    line-height: 1.10; letter-spacing: -0.020em; } /* 32 */
+  h3 { font-size: 1.375rem; line-height: 1.20; letter-spacing: -0.010em; font-weight: 400; } /* 22 */
+  h4 { font-size: 1.125rem; line-height: 1.25; letter-spacing: -0.009em; font-weight: 500; } /* 18 */
+
+  a { color: inherit; }
+
+  /* Tabular numerals on anything that looks like a count or score */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* Subtle hairline divider used everywhere */
+  .hairline { border-color: var(--color-stone); }
+}
+
+/* ------------------------------------------------------------------------- */
+/* Component utility shortcuts                                               */
+/* ------------------------------------------------------------------------- */
+@layer components {
+  .surface {
+    background: var(--color-platinum);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+  }
+  .surface-muted {
+    background: var(--color-porcelain);
+    border: 1px solid var(--color-stone);
+    border-radius: var(--radius-md);
+  }
+  .surface-hero {
+    background: var(--gradient-dreamy);
+  }
+
+  .prose-body {
+    color: var(--color-ink);
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.6;
+  }
+  .prose-body p { margin-block: 0.75em; }
+  .prose-body a { color: var(--color-violet); text-decoration: underline; text-underline-offset: 2px; }
+}

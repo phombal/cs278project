@@ -1,0 +1,592 @@
+# Design System & Style Guide
+
+> Architectural blueprint on white marble — quiet efficiency, poppy where it counts.
+>
+> This file is the single source of truth for the visual language of this product.
+> When generating UI, **always** consult this guide before writing styles. Match these
+> tokens exactly. Do not invent new colors, font sizes, radii, or spacing values.
+
+---
+
+## 1. Design Philosophy
+
+The product takes its visual cues from **Stripe**: a serene white canvas, structured
+grid layouts, and a single vibrant violet that owns every call-to-action. The
+personality is **modern and poppy** — large light-weight display type, expressive
+radial gradients in hero moments, generous whitespace — but the day-to-day surface
+is **calm, dense, and useable**: fine borders, compact rhythm, low-contrast neutrals,
+and very few rounded corners.
+
+Five rules that override everything else:
+
+1. **One brand color does the work.** Deep Violet (`#533afd`) is the only color allowed
+   on primary actions, focused inputs, active states, and key brand accents. Do not
+   substitute blue, teal, or any other "primary."
+2. **Light weights, large sizes.** Display and heading type use weight **300**, never
+   600/700/800. Boldness comes from scale and color, not stroke thickness.
+3. **Whitespace is a feature.** Use the 4 px spacing grid. Sections breathe at 64–96 px;
+   cards stay tight at 12–24 px.
+4. **Pop only in hero moments.** Multi-stop gradients (Sunburst, Dreamy, Fuchsia Glow)
+   are reserved for hero sections, marketing surfaces, and decorative illustration —
+   never as button or card backgrounds in the app shell.
+5. **Sharp, not bubbly.** Border radius is **4 px** for everything interactive (buttons,
+   inputs, tags) and **6 px** for cards. Never use `rounded-full`, `rounded-2xl`, or
+   anything > 8 px on UI chrome.
+
+---
+
+## 2. Color Tokens
+
+Use the CSS custom properties below. Tailwind classes map to the same tokens — see
+section 12 for the full Tailwind v4 `@theme` block.
+
+### 2.1 Brand
+
+| Token                  | Hex       | Role                                                                          |
+| ---------------------- | --------- | ----------------------------------------------------------------------------- |
+| `--color-deep-violet`  | `#533afd` | Primary CTAs, links, focus rings, active states, key brand icons              |
+| `--color-soft-violet`  | `#8087ff` | Decorative icons, gradient highlights, hover glow                             |
+| `--color-washed-violet`| `#b9b9f9` | Outlined-button border, subtle accent fills, selected-row backgrounds at 20%  |
+
+### 2.2 Neutrals (text & surface)
+
+| Token                   | Hex       | Role                                                          |
+| ----------------------- | --------- | ------------------------------------------------------------- |
+| `--color-midnight-ink`  | `#061b31` | Primary text, critical headings, icons on light surfaces      |
+| `--color-slate-blue`    | `#50617a` | Secondary text, muted links, captions, descriptions           |
+| `--color-ghost-gray`    | `#64748d` | Tertiary text, placeholders, disabled labels, inactive icons  |
+| `--color-stone-gray`    | `#d8d6df` | Hairline rules, subtle borders, dividers                      |
+| `--color-powder-blue`   | `#e5edf5` | Alternating section bg, default card surface, table zebras    |
+| `--color-porcelain`     | `#f8fafd` | Slightly elevated surface, light input bg                     |
+| `--color-platinum`      | `#ffffff` | Page background, primary card surface, button text on dark    |
+
+### 2.3 Semantic accents (use sparingly — outlines & badges only)
+
+| Token                    | Hex       | Role                                                       |
+| ------------------------ | --------- | ---------------------------------------------------------- |
+| `--color-accent-green`   | `#81b81a` | Success outlines, positive deltas, "live" status pip       |
+| `--color-vibrant-orange` | `#ff6118` | Warning outlines, "new" / "beta" badges, alert dividers    |
+| `--color-fuchsia`        | `#ff2ede` | Decorative gradient stop only — never as a flat fill       |
+
+### 2.4 Decorative gradients (HERO ONLY)
+
+```css
+--gradient-sunburst: linear-gradient(
+  90deg,
+  rgb(114, 50, 241) 3.13%,
+  rgb(251, 118, 250) 50%,
+  rgb(255, 207, 94)
+);
+
+--gradient-dreamy: radial-gradient(
+  circle,
+  rgb(127, 125, 252),
+  rgb(244, 75, 204) 33%,
+  rgb(229, 237, 245) 66%
+);
+
+--gradient-fuchsia-glow: linear-gradient(
+  0deg,
+  rgb(255, 46, 222),
+  rgb(210, 152, 255)
+);
+
+/* Stripe's signature animated mesh — 4 stops, slowly rotating in a WebGL canvas */
+--gradient-mesh-stops: #6ec3f4, #3a3aff, #ff61ab, #E63946;
+```
+
+**Use cases:** marketing hero sections, empty-state illustrations, auth screens,
+splash/loading panels, decorative side panels in onboarding. **Never** on buttons,
+inputs, navbars, modal backgrounds, or text fills inside the app shell.
+
+### 2.5 Color usage rules
+
+- Default page background is `--color-platinum` (`#ffffff`). Alternate sections may
+  use `--color-powder-blue` for visual rhythm.
+- Body text is `--color-midnight-ink`. Secondary text drops to `--color-slate-blue`,
+  never lighter than `--color-ghost-gray` for legibility.
+- Links use `--color-deep-violet` with no underline by default; underline appears on
+  hover (1 px, `currentColor`, 2 px offset).
+- Focus ring is **always** a 2 px outline of `--color-deep-violet` at 40 % alpha,
+  with a 2 px offset. Never remove focus rings.
+- All color pairs must meet **WCAG AA** (4.5:1 for body, 3:1 for large text).
+  `--color-ghost-gray` on white is borderline — only use it for ≥ 14 px non-essential
+  text.
+
+---
+
+## 3. Typography
+
+### 3.1 Font stack
+
+The reference face is **Söhne** by Klim Type Foundry (variable, OpenType `ss01` + `tnum`).
+Söhne is a paid licensed font; for this project the substitute is **Inter** (variable,
+free via Google Fonts / `next/font`), which mirrors Söhne's proportions closely.
+
+```css
+--font-sans:
+  "Inter", "Söhne", system-ui, -apple-system, "Segoe UI", Roboto,
+  "Helvetica Neue", Arial, sans-serif;
+
+--font-mono:
+  "JetBrains Mono", "Source Code Pro", ui-monospace, SFMono-Regular,
+  Menlo, Consolas, monospace;
+
+/* enable stylistic alt + tabular numerals globally */
+font-feature-settings: "ss01" on, "tnum" on, "cv11" on;
+```
+
+When loading Inter, request weights **300, 400, 500** only. Weight 600+ is forbidden
+for product UI (allowed for code/badges if absolutely necessary).
+
+### 3.2 Type scale (modular, base 16 px, ratio ≈ 1.2)
+
+| Role            | Size   | Weight | Line-height | Letter-spacing | Token              |
+| --------------- | ------ | ------ | ----------- | -------------- | ------------------ |
+| Display Hero    | 56 px  | 300    | 1.03        | -0.030 em      | `--text-display`   |
+| Display Large   | 48 px  | 300    | 1.07        | -0.025 em      | `--text-display-lg`|
+| Heading XL      | 44 px  | 300    | 1.10        | -0.022 em      | `--text-heading-xl`|
+| Heading L       | 32 px  | 300    | 1.10        | -0.020 em      | `--text-heading-l` |
+| Heading M       | 26 px  | 400    | 1.12        | -0.012 em      | `--text-heading-m` |
+| Heading S       | 22 px  | 400    | 1.20        | -0.010 em      | `--text-heading-s` |
+| Subheading      | 18 px  | 400    | 1.40        | -0.009 em      | `--text-subheading`|
+| Body Large      | 18 px  | 400    | 1.50        | normal         | `--text-body-lg`   |
+| Body            | 16 px  | 400    | 1.50        | normal         | `--text-body`      |
+| Body Small      | 14 px  | 400    | 1.45        | normal         | `--text-body-sm`   |
+| Caption         | 12 px  | 400    | 1.45        | 0.01 em        | `--text-caption`   |
+| Code            | 13 px  | 500    | 1.60        | normal         | `--text-code`      |
+| Code Label      | 12 px  | 500    | 1.00        | 0.06 em + UPPER| `--text-code-label`|
+
+### 3.3 Typography rules
+
+- Display and `heading-xl/l` are **weight 300** — never bump to 500/600 for "emphasis."
+  Use scale or color contrast instead.
+- Headings hug their content: tight `line-height` (1.03–1.20) and **negative**
+  letter-spacing.
+- Body copy keeps a **comfortable** `line-height` of 1.4–1.5 and **zero or
+  positive** letter-spacing. Never tighten body text.
+- Long-form prose max width: **65–72 ch**. Never run body text the full width of a
+  desktop viewport.
+- Numbers in tables, dashboards, and any aligned columns must use `font-variant-numeric: tabular-nums`.
+- Do not use `text-transform: uppercase` except for the `code-label` style (eyebrow
+  labels above hero headings) and pill-style status badges.
+- Headings use sentence case. Buttons use sentence case. Only eyebrow labels and
+  status badges may use UPPERCASE.
+
+---
+
+## 4. Spacing & Layout
+
+Base unit: **4 px**. Density: **comfortable**. The grid is non-negotiable.
+
+```
+--spacing-1:  4px
+--spacing-2:  8px
+--spacing-3: 12px
+--spacing-4: 16px
+--spacing-5: 20px
+--spacing-6: 24px
+--spacing-7: 28px
+--spacing-8: 32px
+--spacing-9: 36px
+--spacing-10: 40px
+--spacing-12: 48px
+--spacing-15: 60px
+--spacing-16: 64px
+--spacing-20: 80px
+--spacing-24: 96px
+--spacing-32: 128px
+```
+
+### 4.1 Standard rhythm
+
+- **Element gap** (related items in a row/stack): `8 px`
+- **Group gap** (between input + label, label + help text): `8 px` / `4 px`
+- **Card padding**: `24 px` desktop, `16 px` mobile (`12 px` only for compact info-dense cards)
+- **Section vertical gap**: `64 px` desktop, `48 px` mobile
+- **Hero vertical gap**: `96 px` to `128 px`
+- **Page gutter**: `24 px` mobile, `32 px` tablet, `48 px+` desktop
+- **Container max-width**: `1200 px` (content), `1440 px` (full bleed marketing)
+
+### 4.2 Layout patterns
+
+- Mobile-first. Use a 4 / 8 / 12-column responsive grid (4 mobile, 8 tablet, 12 desktop).
+- Hero sections are full-bleed; everything else is centered in a max-width container.
+- Alternate section backgrounds between `--color-platinum` and `--color-powder-blue`
+  to create rhythm without rules.
+- Sticky top nav is `64 px` tall on desktop, `56 px` on mobile, with a 1 px hairline
+  bottom border in `--color-stone-gray`.
+
+---
+
+## 5. Border Radius
+
+Stripe is **sharp**. Keep it that way.
+
+| Element         | Radius |
+| --------------- | ------ |
+| Buttons         | `4 px` |
+| Inputs / select | `4 px` |
+| Tags / chips    | `4 px` (use `9999 px` only for status pips) |
+| Images / avatars| `4 px` (avatars may be `9999 px`)           |
+| Cards           | `6 px` |
+| Modal / sheet   | `8 px` |
+| Tooltips        | `4 px` |
+
+Anything beyond `8 px` on a rectangular UI element is forbidden.
+
+---
+
+## 6. Elevation & Shadows
+
+Shadows are **soft and diffused**, never sharp drop shadows.
+
+```css
+--shadow-sm:  rgba(23, 23, 23, 0.06)  0px 3px  6px 0px;
+--shadow-md:  rgba(50, 50, 93, 0.08)  0px 8px  16px 0px;
+--shadow-lg:  rgba(23, 23, 23, 0.08)  0px 15px 35px 0px;
+--shadow-xl:  rgba(50, 50, 93, 0.12)  0px 16px 32px 0px;
+--shadow-glow:rgba(83, 58, 253, 0.20) 0px 0px  32px 8px;  /* hero / hovered card */
+
+--ring-focus: 0 0 0 2px rgba(83, 58, 253, 0.40);
+```
+
+### Elevation levels
+
+| Level | Surface             | Shadow              |
+| ----- | ------------------- | ------------------- |
+| 0     | Page bg             | none                |
+| 1     | Default card        | `--shadow-sm`       |
+| 2     | Hovered card        | `--shadow-xl`       |
+| 3     | Floating menu / popover | `--shadow-lg`   |
+| 4     | Modal               | `--shadow-xl`       |
+| 5     | Hero feature card   | `--shadow-glow`     |
+
+Cards default to **no shadow + 1 px border** in `--color-stone-gray`. Add
+`--shadow-sm` on hover. Reserve `--shadow-glow` for marketing hero cards only.
+
+---
+
+## 7. Components
+
+### 7.1 Buttons
+
+Height is fixed at **40 px** (default) or **48 px** (large / hero CTA).
+Padding is symmetric around centered text + optional 16 px icon.
+
+| Variant       | BG                  | Text                | Border                       | Notes                       |
+| ------------- | ------------------- | ------------------- | ---------------------------- | --------------------------- |
+| Primary       | `--color-deep-violet` | `#fff`            | none                         | Default for the main action |
+| Secondary     | `--color-platinum`  | `--color-midnight-ink` | 1 px `--color-stone-gray` | Side-by-side with Primary   |
+| Outlined      | transparent         | `--color-deep-violet` | 1 px `--color-washed-violet` | Tertiary CTA              |
+| Ghost         | transparent         | `--color-midnight-ink` | none                       | Toolbar / inline action     |
+| Destructive   | transparent         | `#c0392b`           | 1 px `#c0392b`               | Confirm-step only           |
+
+- Radius `4 px`. Padding `0 24 px` (default) or `0 28 px` (large).
+- Font: 16 px / weight 400 / line-height 1.0 / letter-spacing `-0.005em`.
+- Hover on Primary: brightness `1.08` + 1 px translateY(-0.5 px) + `--shadow-md`.
+- Active: brightness `0.96`, no translate.
+- Disabled: 40 % opacity, no shadow, `cursor: not-allowed`.
+- Loading: replace label with a 16 px spinner; preserve width to avoid layout shift.
+- Full-width buttons only on mobile or in narrow forms (≤ 360 px).
+
+### 7.2 Inputs (text, email, number, select, textarea)
+
+- Height `40 px` (single-line), padding `0 12 px`.
+- BG `--color-platinum`, border 1 px `--color-stone-gray`, radius `4 px`.
+- Label: 14 px / weight 500 / `--color-midnight-ink`, sits 4 px above the input.
+- Help text: 12 px / `--color-slate-blue`, 4 px below the input.
+- Error: border + help text → `#c0392b`; do **not** turn the input background red.
+- Focus: border → `--color-deep-violet`, plus `--ring-focus`.
+- Placeholder: `--color-ghost-gray`, never italic.
+
+### 7.3 Cards
+
+```css
+.card {
+  background: var(--color-platinum);
+  border: 1px solid var(--color-stone-gray);
+  border-radius: 6px;
+  padding: 24px;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card:hover { box-shadow: var(--shadow-sm); }
+
+.card--feature {        /* marketing / dashboard hero card */
+  background: var(--color-porcelain);
+  border: none;
+  box-shadow: var(--shadow-glow);
+}
+
+.card--muted {          /* secondary surface */
+  background: var(--color-powder-blue);
+  border: none;
+}
+```
+
+### 7.4 Navigation
+
+- Top bar: `64 px` tall, sticky, white bg, 1 px hairline bottom border.
+- Logo on the left (24 px height), nav links centered or left-aligned, account
+  controls right.
+- Nav link: 14 px / weight 400 / `--color-midnight-ink`, 8 px vertical padding.
+  Hover sets text to `--color-deep-violet` only — no underline, no background.
+- Active route gets a 2 px violet underline `1 px below baseline`.
+- Sidebar (app shell): 240 px wide, `--color-porcelain` bg, items 36 px tall,
+  4 px radius, 12 px padding. Selected item bg = `--color-washed-violet` at 30 %.
+
+### 7.5 Tables
+
+- 1 px hairline `--color-stone-gray` between rows. **No vertical** borders.
+- Row height `48 px`. Cell padding `12 px 16 px`.
+- Header: 12 px / weight 500 / UPPERCASE / `--color-slate-blue` /
+  letter-spacing `0.04 em`.
+- Numeric cells: tabular nums, right-aligned.
+- Hover row: bg `--color-porcelain`.
+- Zebra striping is **off** by default; turn on (`--color-porcelain` on odd rows)
+  only for tables > 8 columns.
+
+### 7.6 Tags / badges / status pips
+
+- Tag: 4 px radius, 12 px font, weight 500, padding `4 px 8 px`.
+- Status pip: 8 px circle, optionally with a 12 px label next to it.
+- Map status to color outlines (not fills):
+  - **Live / success** → `--color-accent-green`
+  - **Pending / warning** → `--color-vibrant-orange`
+  - **Failed / error** → `#c0392b`
+  - **Info / neutral** → `--color-slate-blue`
+
+### 7.7 Modals & sheets
+
+- Modal: max-width `560 px`, 8 px radius, 32 px padding, `--shadow-xl`,
+  centered overlay with `rgba(6, 27, 49, 0.40)` scrim.
+- Sheet (mobile): full width, anchored bottom, 12 px top radius, 24 px padding.
+- Always trap focus, return focus on close, support `Esc` to dismiss.
+
+### 7.8 Toasts
+
+- Bottom-right, 360 px max width, 8 px radius, white bg, 1 px border, `--shadow-lg`.
+- Auto-dismiss `5000 ms`, with a thin progress hairline in `--color-deep-violet`.
+
+---
+
+## 8. Iconography
+
+- Use **Lucide** (or Phosphor) outline icons at **1.5 px** stroke.
+- Default size `16 px` inline, `20 px` in buttons, `24 px` in nav.
+- Color inherits `currentColor`. Never apply gradients to functional icons.
+- Decorative icons in marketing surfaces may use `--color-soft-violet` fills or
+  the dreamy gradient, masked.
+
+---
+
+## 9. Motion & Interaction
+
+- Default transition: `200 ms cubic-bezier(0.4, 0, 0.2, 1)` (Material standard
+  ease — Stripe-equivalent feel).
+- Hover state changes: `150 ms`. Page transitions: `300 ms`. Modal in/out: `220 ms`.
+- Use `transform` and `opacity` only for animations — never animate `width`, `height`,
+  `top`, or `left`.
+- Hero gradient meshes animate slowly: full rotation cycle ≥ `12 s`, never distracting.
+- Respect `prefers-reduced-motion`: disable parallax, skew, gradient animation, and
+  anything looped.
+
+---
+
+## 10. Accessibility (non-negotiable)
+
+- WCAG **2.2 AA** minimum across the product.
+- Contrast ratios validated: 4.5:1 for body text, 3:1 for ≥ 18 px or bold ≥ 14 px,
+  3:1 for UI components and graphical objects.
+- Every interactive control reachable by keyboard. Visible 2 px violet focus ring
+  always present (use `:focus-visible`).
+- All form fields have programmatically associated labels (`<label for>` or `aria-labelledby`).
+- All icons that convey meaning have `aria-label`; purely decorative icons get
+  `aria-hidden="true"`.
+- Color is never the sole carrier of meaning — pair status colors with an icon or
+  text label.
+- Hit targets ≥ `44 × 44 px` on touch.
+- Honor `prefers-reduced-motion` and `prefers-color-scheme` (dark mode roadmapped —
+  see section 11).
+
+---
+
+## 11. Dark mode (roadmap)
+
+When dark mode lands, surfaces invert as follows. Do **not** ship dark mode piecemeal:
+
+| Light                    | → Dark                                  |
+| ------------------------ | --------------------------------------- |
+| `--color-platinum`       | `#0a0e1a`                               |
+| `--color-porcelain`      | `#111726`                               |
+| `--color-powder-blue`    | `#1a2235`                               |
+| `--color-stone-gray`     | `#2a3245`                               |
+| `--color-midnight-ink`   | `#f8fafd`                               |
+| `--color-slate-blue`     | `#9aa7be`                               |
+| `--color-deep-violet`    | `#7c66ff` (raise lightness ~ 8 %)       |
+
+Until then, build everything in light mode and avoid hardcoded `#fff` / `#000`
+in component code — always reference tokens.
+
+---
+
+## 12. Implementation
+
+### 12.1 CSS variables (drop-in `:root` block)
+
+```css
+:root {
+  /* Brand */
+  --color-deep-violet: #533afd;
+  --color-soft-violet: #8087ff;
+  --color-washed-violet: #b9b9f9;
+
+  /* Neutrals */
+  --color-midnight-ink: #061b31;
+  --color-slate-blue: #50617a;
+  --color-ghost-gray: #64748d;
+  --color-stone-gray: #d8d6df;
+  --color-powder-blue: #e5edf5;
+  --color-porcelain: #f8fafd;
+  --color-platinum: #ffffff;
+
+  /* Accents */
+  --color-accent-green: #81b81a;
+  --color-vibrant-orange: #ff6118;
+  --color-fuchsia: #ff2ede;
+  --color-danger: #c0392b;
+
+  /* Gradients */
+  --gradient-sunburst: linear-gradient(90deg, #7232f1 3.13%, #fb76fa 50%, #ffcf5e);
+  --gradient-dreamy: radial-gradient(circle, #7f7dfc, #f44bcc 33%, #e5edf5 66%);
+  --gradient-fuchsia-glow: linear-gradient(0deg, #ff2ede, #d298ff);
+
+  /* Spacing (4px grid) */
+  --space-1: 4px;   --space-2: 8px;   --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px;  --space-6: 24px;  --space-8: 32px;  --space-10: 40px;
+  --space-12: 48px; --space-16: 64px; --space-20: 80px; --space-24: 96px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm:  rgba(23, 23, 23, 0.06)  0px 3px  6px 0px;
+  --shadow-md:  rgba(50, 50, 93, 0.08)  0px 8px  16px 0px;
+  --shadow-lg:  rgba(23, 23, 23, 0.08)  0px 15px 35px 0px;
+  --shadow-xl:  rgba(50, 50, 93, 0.12)  0px 16px 32px 0px;
+  --shadow-glow: rgba(83, 58, 253, 0.20) 0px 0px  32px 8px;
+  --ring-focus: 0 0 0 2px rgba(83, 58, 253, 0.40);
+
+  /* Type */
+  --font-sans: "Inter", "Söhne", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+}
+
+html, body {
+  background: var(--color-platinum);
+  color: var(--color-midnight-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01" on, "tnum" on, "cv11" on;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+```
+
+### 12.2 Tailwind v4 `@theme`
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-violet:        #533afd;
+  --color-violet-soft:   #8087ff;
+  --color-violet-washed: #b9b9f9;
+  --color-ink:           #061b31;
+  --color-slate:         #50617a;
+  --color-ghost:         #64748d;
+  --color-stone:         #d8d6df;
+  --color-powder:        #e5edf5;
+  --color-porcelain:     #f8fafd;
+  --color-platinum:      #ffffff;
+  --color-success:       #81b81a;
+  --color-warning:       #ff6118;
+  --color-danger:        #c0392b;
+
+  --font-sans: "Inter", "Söhne", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --shadow-soft:  0 3px  6px 0 rgb(23 23 23 / 0.06);
+  --shadow-pop:   0 16px 32px 0 rgb(50 50 93 / 0.12);
+  --shadow-glow:  0 0   32px 8px rgb(83 58 253 / 0.20);
+}
+```
+
+### 12.3 Recommended stack (when adding code)
+
+- **Framework:** Next.js (App Router) + React 19 + TypeScript (strict).
+- **Styling:** Tailwind CSS v4 + CSS variables above. No CSS-in-JS runtimes.
+- **Components:** shadcn/ui as the foundation, restyled to these tokens (replace
+  default `--primary` with `--color-violet`, `--radius` with `4 px`).
+- **Icons:** `lucide-react`.
+- **Fonts:** `next/font/google` for Inter (weights 300, 400, 500), display=`swap`.
+- **Animation:** Framer Motion for choreographed sequences only; CSS transitions
+  for everything else.
+
+---
+
+## 13. AI authoring rules
+
+When writing or modifying UI code in this repo, follow these instructions:
+
+1. **Always import tokens, never hardcode.** Use `var(--color-deep-violet)` /
+   `text-violet` / `bg-platinum`, never `#533afd` or `bg-[#533afd]` literals.
+2. **Reuse component primitives** before building a new one. Check `components/ui/`
+   first.
+3. **Pick the smallest valid primitive.** A status pip is a `<span>`, not a `Card`.
+4. **Match the type scale exactly.** If a heading "feels" like it should be 20 px,
+   pick 18 px or 22 px from the scale — do not introduce 20 px.
+5. **Spacing must come from the 4 px scale.** No `padding: 13px` or `gap: 7px`.
+6. **No new fonts, ever.** If the design seems to call for one, use weight + size
+   instead.
+7. **Gradients are opt-in.** Default to flat surfaces. Only add a gradient when the
+   user explicitly asks for "hero", "marketing", "splash", or "decorative."
+8. **Ship accessible by default.** Every button has an accessible name, every input
+   has a label, every focus state is visible, every interactive element is keyboard-
+   reachable.
+9. **Animate sparingly.** If you can't justify the motion in one sentence, remove it.
+10. **Generate dark-mode-safe code.** Never write `bg-white` / `text-black` directly;
+    always reference a token, even if dark mode is not yet active.
+
+---
+
+## 14. Quick reference cheatsheet
+
+```
+PRIMARY ACTION     bg-violet  text-platinum  rounded-[4px]  h-10  px-6   shadow-md(hover)
+SECONDARY ACTION   bg-platinum text-ink  border-stone  rounded-[4px]  h-10  px-6
+LINK               text-violet  hover:underline  underline-offset-2
+HEADING (hero)     56px / 300 / -0.03em / ink
+HEADING (section)  32px / 300 / -0.02em / ink
+BODY               16px / 400 / 1.5    / ink
+CAPTION            12px / 400 / 1.45   / slate
+CARD               bg-platinum border-stone rounded-[6px] p-6 hover:shadow-sm
+INPUT              h-10 px-3 rounded-[4px] border-stone focus:border-violet focus:ring-violet/40
+SECTION GAP        py-16 (64px)  /  py-24 (96px hero)
+PAGE GUTTER        px-6 md:px-8 lg:px-12
+```
+
+When in doubt: **white background, midnight text, one violet button, lots of
+whitespace, light-weight headings.** That's the look.
