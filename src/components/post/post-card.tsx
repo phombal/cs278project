@@ -5,6 +5,10 @@ import { VoteButtons } from "@/components/post/vote-buttons";
 import { SaveButton } from "@/components/post/save-button";
 import { timeAgo } from "@/lib/time";
 import { formatRent, formatScore } from "@/lib/utils";
+import {
+  publicAuthorLabel,
+  publicProfileSegment,
+} from "@/lib/public-profile";
 import type { PostType } from "@/types/database";
 
 export interface PostCardData {
@@ -13,9 +17,15 @@ export interface PostCardData {
   body: string | null;
   post_type: PostType;
   rating: number | null;
+  rating_overall: number | null;
   rent_per_month_cents: number | null;
   building_or_address: string | null;
+  address_formatted: string | null;
+  google_place_id: string | null;
   neighborhood_slug: string | null;
+  lease_type: string | null;
+  furnished: boolean | null;
+  affiliation: string | null;
   upvotes: number;
   downvotes: number;
   score: number;
@@ -24,6 +34,7 @@ export interface PostCardData {
   is_locked: boolean;
   created_at: string;
   author_username: string;
+  author_anonymous_handle: string;
   author_display_name: string;
   board_slug: string;
   board_name: string;
@@ -49,10 +60,21 @@ export function PostCard({
   authed: boolean;
   showBoard?: boolean;
 }) {
+  const authorLabel = publicAuthorLabel(post.author_anonymous_handle);
+  const profileSeg = publicProfileSegment(
+    post.author_anonymous_handle,
+    post.author_username,
+  );
+  const displayRating =
+    post.rating_overall != null ? Number(post.rating_overall) : post.rating;
+  const addressLine = post.address_formatted ?? post.building_or_address;
+  const buildingHref =
+    post.google_place_id &&
+    `/building/${encodeURIComponent(post.google_place_id)}`;
+
   return (
-    <article className="rounded-[6px] border border-stone bg-platinum hover:border-violet-washed/60 hover:shadow-[var(--shadow-soft)] transition-[border-color,box-shadow] duration-200">
+    <article className="rounded-[6px] border border-stone bg-platinum hover:border-violet-washed/60 hover:shadow-soft transition-[border-color,box-shadow] duration-200">
       <div className="flex">
-        {/* Left rail with vote */}
         <div className="flex flex-col items-center justify-start py-4 pl-3 pr-2 border-r border-stone bg-porcelain rounded-l-[6px]">
           <VoteButtons
             targetType="post"
@@ -63,7 +85,6 @@ export function PostCard({
           />
         </div>
 
-        {/* Main content */}
         <div className="flex-1 min-w-0 p-4">
           <header className="flex items-center gap-1.5 text-[12px] text-slate flex-wrap">
             {showBoard && (
@@ -79,10 +100,10 @@ export function PostCard({
             )}
             <span>posted by</span>
             <Link
-              href={`/u/${post.author_username}`}
+              href={`/u/${encodeURIComponent(profileSeg)}`}
               className="hover:text-violet"
             >
-              @{post.author_username}
+              {authorLabel}
             </Link>
             <span className="text-ghost">·</span>
             <time dateTime={post.created_at}>{timeAgo(post.created_at)}</time>
@@ -104,10 +125,11 @@ export function PostCard({
             </h3>
           </Link>
 
-          {/* Review meta row */}
           {post.post_type === "review" && (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {post.rating != null && <RatingStars rating={post.rating} />}
+              {displayRating != null && (
+                <RatingStars rating={Math.round(displayRating)} />
+              )}
               {post.rent_per_month_cents != null && (
                 <span className="inline-flex items-center gap-1 text-[12px] text-slate">
                   <Home size={12} />
@@ -116,23 +138,46 @@ export function PostCard({
                   </span>
                 </span>
               )}
-              {post.building_or_address && (
+              {addressLine && (
                 <span className="inline-flex items-center gap-1 text-[12px] text-slate truncate max-w-[280px]">
                   <MapPin size={12} />
-                  <span className="truncate">{post.building_or_address}</span>
+                  {buildingHref ? (
+                    <Link
+                      href={buildingHref}
+                      onClick={(e) => e.stopPropagation()}
+                      className="truncate text-violet hover:underline"
+                    >
+                      {addressLine}
+                    </Link>
+                  ) : (
+                    <span className="truncate">{addressLine}</span>
+                  )}
                 </span>
+              )}
+              {post.lease_type && (
+                <Badge variant="outline" className="text-[10px]">
+                  {post.lease_type === "short_term" ? "Short-term" : "Long-term"}
+                </Badge>
+              )}
+              {post.furnished != null && (
+                <Badge variant="outline" className="text-[10px]">
+                  {post.furnished ? "Furnished" : "Unfurnished"}
+                </Badge>
+              )}
+              {post.affiliation?.trim() && (
+                <Badge variant="neutral" className="text-[10px] normal-case">
+                  {post.affiliation.trim()}
+                </Badge>
               )}
             </div>
           )}
 
-          {/* Snippet */}
           {post.body && (
             <p className="mt-2 text-[14px] text-slate line-clamp-2 leading-relaxed">
               {post.body}
             </p>
           )}
 
-          {/* Meta footer */}
           <footer className="mt-3 flex items-center gap-3 text-[12px] text-slate">
             <Badge variant="outline">{postTypeLabel[post.post_type]}</Badge>
             <Link

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PostCard, type PostCardData } from "@/components/post/post-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getFeedUserState } from "@/lib/feed";
+import { getFeedUserState, type FeedUserState } from "@/lib/feed";
 import type { BoardKind } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -79,13 +79,17 @@ export default async function SearchPage({
   const boards = (boardsRes.data ?? []) as BoardHit[];
   const posts = (postsRes.data ?? []) as PostCardData[];
 
-  const { voteMap, bookmarkSet } = user
+  const { voteMap, bookmarkSet } = (user
     ? await getFeedUserState(
         supabase,
         user.id,
         posts.map((p) => p.id),
       )
-    : { voteMap: new Map<string, 1 | -1>(), bookmarkSet: new Set<string>() };
+    : {
+        voteMap: new Map<string, 1 | -1>(),
+        bookmarkSet: new Set<string>(),
+        helpfulSet: new Set<string>(),
+      }) satisfies FeedUserState;
 
   const totalHits = boards.length + posts.length;
 

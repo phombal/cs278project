@@ -3,7 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { PostType } from "@/types/database";
+import type { LeaseType, PostType } from "@/types/database";
+
+function avgFive(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number,
+): number {
+  return Math.round(((a + b + c + d + e) / 5) * 100) / 100;
+}
 
 export async function createPost(formData: FormData): Promise<void> {
   const supabase = await createClient();
@@ -31,20 +41,7 @@ export async function createPost(formData: FormData): Promise<void> {
 
   if (boardError || !board) throw new Error("That board doesn't exist.");
 
-  const insertRow: {
-    board_id: string;
-    author_id: string;
-    post_type: PostType;
-    title: string;
-    body: string | null;
-    neighborhood_slug: string | null;
-    rating?: number;
-    rent_per_month_cents?: number;
-    building_or_address?: string;
-    would_recommend?: boolean;
-    lease_start?: string;
-    lease_end?: string;
-  } = {
+  const insertRow: Record<string, unknown> = {
     board_id: board.id,
     author_id: user!.id,
     post_type: postType,
@@ -54,11 +51,70 @@ export async function createPost(formData: FormData): Promise<void> {
   };
 
   if (postType === "review") {
-    const ratingRaw = formData.get("rating");
-    const rating = ratingRaw ? Number(ratingRaw) : null;
-    if (!rating || rating < 1 || rating > 5)
-      throw new Error("Reviews must include a 1–5 rating.");
-    insertRow.rating = rating;
+    const placeId = String(formData.get("google_place_id") ?? "").trim();
+    const addressFormatted = String(
+      formData.get("address_formatted") ?? "",
+    ).trim();
+    const latRaw = formData.get("latitude");
+    const lngRaw = formData.get("longitude");
+    if (!placeId) throw new Error("Choose an address from the suggestions.");
+    if (!addressFormatted)
+      throw new Error("Address is missing — pick a place again.");
+
+    const rl = Number(formData.get("rating_landlord"));
+    const rn = Number(formData.get("rating_noise"));
+    const rs = Number(formData.get("rating_safety"));
+    const rv = Number(formData.get("rating_value"));
+    const rc = Number(formData.get("rating_commute"));
+    for (const [v, label] of [
+      [rl, "Landlord"],
+      [rn, "Noise"],
+      [rs, "Safety"],
+      [rv, "Value"],
+      [rc, "Commute"],
+    ] as const) {
+      if (!Number.isFinite(v) || v < 1 || v > 5) {
+        throw new Error(`Please rate ${label} from 1–5.`);
+      }
+    }
+
+    const leaseType = String(formData.get("lease_type") ?? "").trim() as
+      | LeaseType
+      | "";
+    if (leaseType !== "short_term" && leaseType !== "long_term") {
+      throw new Error("Choose short-term or long-term lease.");
+    }
+
+    const furnishedRaw = formData.get("furnished");
+    if (furnishedRaw === null || furnishedRaw === "")
+      throw new Error("Say whether the place was furnished.");
+
+    insertRow.google_place_id = placeId;
+    insertRow.address_formatted = addressFormatted;
+    insertRow.building_or_address = addressFormatted;
+    if (latRaw != null && String(latRaw).trim() !== "") {
+      const lat = Number(latRaw);
+      if (Number.isFinite(lat)) insertRow.latitude = lat;
+    }
+    if (lngRaw != null && String(lngRaw).trim() !== "") {
+      const lng = Number(lngRaw);
+      if (Number.isFinite(lng)) insertRow.longitude = lng;
+    }
+    insertRow.rating_landlord = rl;
+    insertRow.rating_noise = rn;
+    insertRow.rating_safety = rs;
+    insertRow.rating_value = rv;
+    insertRow.rating_commute = rc;
+    insertRow.rating_overall = avgFive(rl, rn, rs, rv, rc);
+    insertRow.rating = Math.round(insertRow.rating_overall as number);
+    insertRow.lease_type = leaseType;
+    insertRow.furnished = String(furnishedRaw) === "true";
+
+    const aff = String(formData.get("affiliation") ?? "").trim().slice(0, 40);
+    if (aff) insertRow.affiliation = aff;
+
+    const nb = String(formData.get("neighborhood") ?? "").trim();
+    if (nb) insertRow.neighborhood_slug = nb;
 
     const rentRaw = formData.get("rent_per_month");
     if (rentRaw) {
@@ -68,20 +124,14 @@ export async function createPost(formData: FormData): Promise<void> {
       insertRow.rent_per_month_cents = Math.round(rent * 100);
     }
 
-    const addr = String(formData.get("building_or_address") ?? "").trim();
-    if (addr) insertRow.building_or_address = addr;
-
-    const recommend = formData.get("would_recommend");
-    if (recommend != null)
-      insertRow.would_recommend = String(recommend) === "true";
-
     const ls = String(formData.get("lease_start") ?? "").trim();
     const le = String(formData.get("lease_end") ?? "").trim();
     if (ls) insertRow.lease_start = ls;
     if (le) insertRow.lease_end = le;
 
-    const nb = String(formData.get("neighborhood") ?? "").trim();
-    if (nb) insertRow.neighborhood_slug = nb;
+    const recommend = formData.get("would_recommend");
+    if (recommend != null)
+      insertRow.would_recommend = String(recommend) === "true";
   }
 
   const { data: created, error } = await supabase

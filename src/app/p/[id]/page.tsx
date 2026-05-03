@@ -10,6 +10,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { VoteButtons } from "@/components/post/vote-buttons";
 import { SaveButton } from "@/components/post/save-button";
+import { ReviewHelpfulButton } from "@/components/post/review-helpful-button";
 import {
   CommentThread,
   buildCommentTree,
@@ -19,6 +20,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/time";
 import { formatRent } from "@/lib/utils";
+import {
+  publicAuthorLabel,
+  publicProfileSegment,
+} from "@/lib/public-profile";
 import type {
   CommentWithAuthor,
   PostWithAuthor,
@@ -66,10 +71,10 @@ export default async function PostPage({
 
   const comments = (commentsRaw ?? []) as CommentWithAuthor[];
 
-  // Vote map + bookmark state for current user
   let myPostVote: 1 | -1 | 0 = 0;
   const myCommentVotes = new Map<string, 1 | -1>();
   let myBookmarked = false;
+  let myHelpful = false;
 
   if (user) {
     const allTargetIds = [post.id, ...comments.map((c) => c.id)];
@@ -94,6 +99,16 @@ export default async function PostPage({
       }
     }
     myBookmarked = !!bookmarkRes.data;
+
+    if (post.post_type === "review") {
+      const { data: h } = await supabase
+        .from("review_helpful_votes")
+        .select("post_id")
+        .eq("user_id", user.id)
+        .eq("post_id", post.id)
+        .maybeSingle();
+      myHelpful = !!h;
+    }
   }
 
   const tree = buildCommentTree(
@@ -102,6 +117,15 @@ export default async function PostPage({
       myVote: myCommentVotes.get(c.id) ?? 0,
     })),
   );
+
+  const authorLabel = publicAuthorLabel(post.author_anonymous_handle);
+  const profileSeg = publicProfileSegment(
+    post.author_anonymous_handle,
+    post.author_username,
+  );
+  const buildingHref: string | null = post.google_place_id
+    ? `/building/${encodeURIComponent(post.google_place_id)}`
+    : null;
 
   return (
     <main className="mx-auto max-w-[920px] px-6 py-6">
@@ -113,7 +137,6 @@ export default async function PostPage({
         Back to b/{post.board_slug}
       </Link>
 
-      {/* Post body */}
       <article className="mt-3 rounded-[6px] border border-stone bg-platinum">
         <div className="flex">
           <div className="flex flex-col items-center pt-5 pl-3 pr-2 border-r border-stone bg-porcelain rounded-l-[6px]">
@@ -136,14 +159,14 @@ export default async function PostPage({
               <span className="text-ghost">·</span>
               <Avatar
                 src={post.author_avatar_url}
-                name={post.author_display_name}
+                name={authorLabel}
                 size={18}
               />
               <Link
-                href={`/u/${post.author_username}`}
+                href={`/u/${encodeURIComponent(profileSeg)}`}
                 className="hover:text-violet"
               >
-                @{post.author_username}
+                {authorLabel}
               </Link>
               <span className="text-ghost">·</span>
               <time dateTime={post.created_at}>{timeAgo(post.created_at)}</time>
@@ -158,12 +181,24 @@ export default async function PostPage({
             </h1>
 
             {post.post_type === "review" && (
-              <ReviewMeta post={post} />
+              <ReviewMeta post={post} buildingHref={buildingHref} />
             )}
 
             {post.body && (
               <div className="prose-body mt-4 whitespace-pre-wrap break-words">
                 {post.body}
+              </div>
+            )}
+
+            {post.post_type === "review" && (
+              <div className="mt-5">
+                <ReviewHelpfulButton
+                  postId={post.id}
+                  initialCount={post.helpful_count ?? 0}
+                  initialMarked={myHelpful}
+                  authed={!!user}
+                  isOwnReview={!!user && user.id === post.author_id}
+                />
               </div>
             )}
 
@@ -178,7 +213,6 @@ export default async function PostPage({
         </div>
       </article>
 
-      {/* Comment composer */}
       <section
         id="comments"
         className="mt-6 rounded-[6px] border border-stone bg-platinum p-5"
@@ -204,7 +238,6 @@ export default async function PostPage({
         )}
       </section>
 
-      {/* Comment tree */}
       <section className="mt-6">
         <CommentThread
           nodes={tree}
@@ -217,71 +250,152 @@ export default async function PostPage({
   );
 }
 
-function ReviewMeta({ post }: { post: PostWithAuthor }) {
+function ReviewMeta({
+  post,
+  buildingHref,
+}: {
+  post: PostWithAuthor;
+  buildingHref: string | null;
+}) {
+  const dims = [
+    { label: "Landlord", v: post.rating_landlord },
+    { label: "Noise", v: post.rating_noise },
+    { label: "Safety", v: post.rating_safety },
+    { label: "Value", v: post.rating_value },
+    { label: "Commute", v: post.rating_commute },
+  ];
+  const hasDims = dims.some((d) => d.v != null);
+
   return (
-    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-[6px] border border-stone bg-porcelain p-4">
-      {post.rating != null && (
-        <Stat
-          label="Rating"
-          value={
-            <span className="inline-flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((n) => (
+    <div className="mt-3 flex flex-col gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-[6px] border border-stone bg-porcelain p-4">
+        {(post.rating_overall != null || post.rating != null) && (
+          <Stat
+            label="Overall"
+            value={
+              <span className="inline-flex items-center gap-1 tabular">
                 <Star
-                  key={n}
                   size={14}
-                  className={
-                    n <= post.rating!
-                      ? "text-[color:var(--color-warning)] fill-[color:var(--color-warning)]"
-                      : "text-stone"
-                  }
+                  className="text-[color:var(--color-warning)] fill-[color:var(--color-warning)]"
                 />
-              ))}
-            </span>
-          }
-        />
-      )}
-      {post.rent_per_month_cents != null && (
-        <Stat
-          label="Monthly rent"
-          icon={<HomeIcon size={12} />}
-          value={
-            <span className="tabular">
-              {formatRent(post.rent_per_month_cents)}/mo
-            </span>
-          }
-        />
-      )}
-      {post.building_or_address && (
-        <Stat
-          label="Address"
-          icon={<MapPin size={12} />}
-          value={
-            <span className="truncate block max-w-full">
-              {post.building_or_address}
-            </span>
-          }
-        />
-      )}
-      {(post.lease_start || post.lease_end) && (
-        <Stat
-          label="Lease"
-          icon={<Calendar size={12} />}
-          value={
-            <span className="tabular">
-              {post.lease_start ?? "?"} → {post.lease_end ?? "?"}
-            </span>
-          }
-        />
-      )}
-      {post.would_recommend != null && (
-        <Stat
-          label="Recommend"
-          value={
-            <Badge variant={post.would_recommend ? "success" : "warning"}>
-              {post.would_recommend ? "Yes" : "No"}
-            </Badge>
-          }
-        />
+                {post.rating_overall != null
+                  ? Number(post.rating_overall).toFixed(1)
+                  : post.rating}
+                /5
+              </span>
+            }
+          />
+        )}
+        {post.rent_per_month_cents != null && (
+          <Stat
+            label="Monthly rent"
+            icon={<HomeIcon size={12} />}
+            value={
+              <span className="tabular">
+                {formatRent(post.rent_per_month_cents)}/mo
+              </span>
+            }
+          />
+        )}
+        {(post.address_formatted || post.building_or_address) && (
+          <Stat
+            label="Address"
+            icon={<MapPin size={12} />}
+            value={
+              buildingHref != null ? (
+                <Link
+                  href={buildingHref}
+                  className="text-violet hover:underline truncate block max-w-full"
+                >
+                  {post.address_formatted ?? post.building_or_address}
+                </Link>
+              ) : (
+                <span className="truncate block max-w-full">
+                  {post.address_formatted ?? post.building_or_address}
+                </span>
+              )
+            }
+          />
+        )}
+        {post.lease_type && (
+          <Stat
+            label="Lease"
+            value={
+              <Badge variant="outline">
+                {post.lease_type === "short_term"
+                  ? "Short-term (1–6 mo)"
+                  : "Long-term (6+ mo)"}
+              </Badge>
+            }
+          />
+        )}
+        {post.furnished != null && (
+          <Stat
+            label="Furnished"
+            value={<Badge variant="outline">{post.furnished ? "Yes" : "No"}</Badge>}
+          />
+        )}
+        {(post.lease_start || post.lease_end) && (
+          <Stat
+            label="Lease dates"
+            icon={<Calendar size={12} />}
+            value={
+              <span className="tabular">
+                {post.lease_start ?? "?"} → {post.lease_end ?? "?"}
+              </span>
+            }
+          />
+        )}
+        {post.would_recommend != null && (
+          <Stat
+            label="Recommend"
+            value={
+              <Badge variant={post.would_recommend ? "success" : "warning"}>
+                {post.would_recommend ? "Yes" : "No"}
+              </Badge>
+            }
+          />
+        )}
+        {post.affiliation?.trim() && (
+          <Stat
+            label="Affiliation"
+            value={
+              <Badge variant="neutral" className="normal-case tracking-normal">
+                {post.affiliation.trim()}
+              </Badge>
+            }
+          />
+        )}
+      </div>
+
+      {hasDims && (
+        <div className="rounded-[6px] border border-stone bg-platinum p-4">
+          <p className="text-[11px] uppercase tracking-[0.04em] text-ghost mb-3">
+            Dimension ratings
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            {dims.map(({ label, v }) =>
+              v != null ? (
+                <div key={label}>
+                  <div className="text-[11px] text-slate">{label}</div>
+                  <div className="mt-1 flex gap-0.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star
+                        key={n}
+                        size={12}
+                        className={
+                          n <= v
+                            ? "text-[color:var(--color-warning)] fill-[color:var(--color-warning)]"
+                            : "text-stone"
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null,
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
