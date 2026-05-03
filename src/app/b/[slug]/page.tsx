@@ -7,7 +7,7 @@ import { PostCard, type PostCardData } from "@/components/post/post-card";
 import { SortTabs, type SortKey } from "@/components/post/sort-tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getFeedUserState } from "@/lib/feed";
+import { getFeedUserState, type FeedUserState } from "@/lib/feed";
 import type { BoardKind } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -83,13 +83,17 @@ export default async function BoardPage({
 
   const postRows = (posts ?? []) as PostCardData[];
 
-  const { voteMap, bookmarkSet } = user
+  const { voteMap, bookmarkSet } = (user
     ? await getFeedUserState(
         supabase,
         user.id,
         postRows.map((p) => p.id),
       )
-    : { voteMap: new Map<string, 1 | -1>(), bookmarkSet: new Set<string>() };
+    : {
+        voteMap: new Map<string, 1 | -1>(),
+        bookmarkSet: new Set<string>(),
+        helpfulSet: new Set<string>(),
+      }) satisfies FeedUserState;
 
   const KindIcon = kindIcon[board.kind as BoardKind];
 

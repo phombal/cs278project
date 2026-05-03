@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { UserMenu } from "@/components/nav/user-menu";
+import { publicAuthorLabel } from "@/lib/public-profile";
 
 export async function TopNav() {
   const supabase = await createClient();
@@ -15,7 +16,7 @@ export async function TopNav() {
   if (user) {
     const { data } = await supabase
       .from("profiles")
-      .select("username, display_name, avatar_url")
+      .select("username, anonymous_handle, avatar_url")
       .eq("id", user.id)
       .single();
     profile = data;
@@ -63,8 +64,7 @@ export async function TopNav() {
                 </Button>
               </Link>
               <UserMenu
-                username={profile?.username ?? "you"}
-                displayName={profile?.display_name ?? user.email ?? "You"}
+                anonymousHandle={publicAuthorLabel(profile?.anonymous_handle)}
                 avatarUrl={profile?.avatar_url ?? null}
               />
             </>

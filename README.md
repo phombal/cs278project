@@ -51,6 +51,8 @@ Tables:
 - `votes` — upvote/downvote on posts and comments, with triggers that maintain `upvotes`/`downvotes`/`score` aggregates
 - `bookmarks` — user-saved posts
 - `roommate_pings` — direct expression-of-interest between users
+- `review_helpful_votes` — per-user “helpful” on review posts (separate from `votes`)
+- `profiles.anonymous_handle` — public animal-style handle; `posts` includes Place ID, five dimension ratings, `rating_overall`, `lease_type`, `furnished`, `affiliation`, `helpful_count`
 
 RLS is enabled on every public table. Views are `security_invoker = true`
 (Postgres 15+).
@@ -67,7 +69,8 @@ npm run db:types
 - `/b/[slug]` — board page (e.g. `/b/mission`, `/b/sf-housing`, `/b/roommates`, `/b/future-housing`)
 - `/p/[id]` — single post + nested comment thread
 - `/submit` — create a new post (with review-specific fields)
-- `/u/[username]` — user profile + their posts
+- `/u/[handle]` — profile by anonymous handle (legacy `/u/username` still resolves)
+- `/building/[placeId]` — aggregated reviews for a Google Place ID
 - `/login` — magic-link auth via Supabase OTP
 - `/auth/callback` — code-exchange handler
 

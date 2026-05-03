@@ -1,23 +1,29 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export type FeedUserState = {
+  voteMap: Map<string, 1 | -1>;
+  bookmarkSet: Set<string>;
+  helpfulSet: Set<string>;
+};
+
 /**
- * For a signed-in user + a list of post IDs, fetch the user's vote and
- * bookmark state in two parallel queries. Returns Maps you can merge into
- * a feed render.
+ * For a signed-in user + a list of post IDs, fetch the user's vote,
+ * bookmark, and review-helpful state in parallel.
  */
 export async function getFeedUserState(
   supabase: SupabaseClient,
   userId: string,
   postIds: string[],
-): Promise<{
-  voteMap: Map<string, 1 | -1>;
-  bookmarkSet: Set<string>;
-}> {
+): Promise<FeedUserState> {
   if (postIds.length === 0) {
-    return { voteMap: new Map(), bookmarkSet: new Set() };
+    return {
+      voteMap: new Map(),
+      bookmarkSet: new Set(),
+      helpfulSet: new Set(),
+    };
   }
 
-  const [votesRes, bookmarksRes] = await Promise.all([
+  const [votesRes, bookmarksRes, helpfulRes] = await Promise.all([
     supabase
       .from("votes")
       .select("target_id, value")
@@ -29,6 +35,11 @@ export async function getFeedUserState(
       .select("post_id")
       .eq("user_id", userId)
       .in("post_id", postIds),
+    supabase
+      .from("review_helpful_votes")
+      .select("post_id")
+      .eq("user_id", userId)
+      .in("post_id", postIds),
   ]);
 
   const voteMap = new Map<string, 1 | -1>(
@@ -37,6 +48,9 @@ export async function getFeedUserState(
   const bookmarkSet = new Set<string>(
     (bookmarksRes.data ?? []).map((b) => b.post_id),
   );
+  const helpfulSet = new Set<string>(
+    (helpfulRes.data ?? []).map((h) => h.post_id),
+  );
 
-  return { voteMap, bookmarkSet };
+  return { voteMap, bookmarkSet, helpfulSet };
 }

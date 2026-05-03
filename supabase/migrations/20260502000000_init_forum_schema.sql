@@ -42,10 +42,11 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create index profiles_username_idx on public.profiles (lower(username));
-create index profiles_looking_idx on public.profiles (is_looking_for_roommate)
+create index if not exists profiles_username_idx on public.profiles (lower(username));
+create index if not exists profiles_looking_idx on public.profiles (is_looking_for_roommate)
   where is_looking_for_roommate = true;
 
+drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_updated_at();
@@ -105,12 +106,16 @@ create table if not exists public.neighborhoods (
 --   megathread      — global SF-wide discussion (/b/sf-housing)
 --   roommates       — find/post roommate listings (/b/roommates)
 --   future-housing  — "where will you live next" planning (/b/future-housing)
-create type public.board_kind as enum (
-  'neighborhood',
-  'megathread',
-  'roommates',
-  'future-housing'
-);
+do $board_kind$ begin
+  create type public.board_kind as enum (
+    'neighborhood',
+    'megathread',
+    'roommates',
+    'future-housing'
+  );
+exception
+  when duplicate_object then null;
+end $board_kind$;
 
 create table if not exists public.boards (
   id uuid primary key default gen_random_uuid(),
@@ -125,20 +130,24 @@ create table if not exists public.boards (
   created_at timestamptz not null default now()
 );
 
-create index boards_kind_idx on public.boards (kind);
-create unique index boards_one_per_neighborhood
+create index if not exists boards_kind_idx on public.boards (kind);
+create unique index if not exists boards_one_per_neighborhood
   on public.boards (neighborhood_slug)
   where neighborhood_slug is not null;
 
 -- =============================================================================
 -- 3. POSTS (top-level submissions in a board)
 -- =============================================================================
-create type public.post_type as enum (
-  'discussion',  -- general discussion / question
-  'review',      -- review of a place I lived
-  'roommate',    -- looking for / offering a roommate
-  'question'     -- specific question
-);
+do $post_type$ begin
+  create type public.post_type as enum (
+    'discussion',  -- general discussion / question
+    'review',      -- review of a place I lived
+    'roommate',    -- looking for / offering a roommate
+    'question'     -- specific question
+  );
+exception
+  when duplicate_object then null;
+end $post_type$;
 
 create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
@@ -174,13 +183,14 @@ create table if not exists public.posts (
     check (lease_start is null or lease_end is null or lease_start <= lease_end)
 );
 
-create index posts_board_created_idx on public.posts (board_id, created_at desc);
-create index posts_board_score_idx on public.posts (board_id, score desc, created_at desc);
-create index posts_author_idx on public.posts (author_id, created_at desc);
-create index posts_neighborhood_idx on public.posts (neighborhood_slug)
+create index if not exists posts_board_created_idx on public.posts (board_id, created_at desc);
+create index if not exists posts_board_score_idx on public.posts (board_id, score desc, created_at desc);
+create index if not exists posts_author_idx on public.posts (author_id, created_at desc);
+create index if not exists posts_neighborhood_idx on public.posts (neighborhood_slug)
   where neighborhood_slug is not null;
-create index posts_type_idx on public.posts (post_type);
+create index if not exists posts_type_idx on public.posts (post_type);
 
+drop trigger if exists posts_set_updated_at on public.posts;
 create trigger posts_set_updated_at
   before update on public.posts
   for each row execute function public.set_updated_at();
@@ -203,10 +213,11 @@ create table if not exists public.comments (
   updated_at timestamptz not null default now()
 );
 
-create index comments_post_idx on public.comments (post_id, created_at);
-create index comments_parent_idx on public.comments (parent_comment_id);
-create index comments_author_idx on public.comments (author_id, created_at desc);
+create index if not exists comments_post_idx on public.comments (post_id, created_at);
+create index if not exists comments_parent_idx on public.comments (parent_comment_id);
+create index if not exists comments_author_idx on public.comments (author_id, created_at desc);
 
+drop trigger if exists comments_set_updated_at on public.comments;
 create trigger comments_set_updated_at
   before update on public.comments
   for each row execute function public.set_updated_at();
@@ -233,6 +244,7 @@ begin
 end;
 $$;
 
+drop trigger if exists comments_compute_depth on public.comments;
 create trigger comments_compute_depth
   before insert on public.comments
   for each row execute function public.handle_new_comment();
@@ -253,6 +265,7 @@ begin
 end;
 $$;
 
+drop trigger if exists comments_bump_count on public.comments;
 create trigger comments_bump_count
   after insert or delete on public.comments
   for each row execute function public.bump_post_comment_count();
@@ -260,8 +273,17 @@ create trigger comments_bump_count
 -- =============================================================================
 -- 5. VOTES (upvote / downvote on posts and comments)
 -- =============================================================================
-create type public.vote_target as enum ('post', 'comment');
-create domain public.vote_value as smallint check (value in (-1, 1));
+do $vote_target$ begin
+  create type public.vote_target as enum ('post', 'comment');
+exception
+  when duplicate_object then null;
+end $vote_target$;
+
+do $vote_value$ begin
+  create domain public.vote_value as smallint check (value in (-1, 1));
+exception
+  when duplicate_object then null;
+end $vote_value$;
 
 create table if not exists public.votes (
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -272,7 +294,7 @@ create table if not exists public.votes (
   primary key (user_id, target_type, target_id)
 );
 
-create index votes_target_idx on public.votes (target_type, target_id);
+create index if not exists votes_target_idx on public.votes (target_type, target_id);
 
 -- Maintain upvote/downvote/score counters on posts and comments.
 create or replace function public.apply_vote_delta(
@@ -331,6 +353,7 @@ begin
 end;
 $$;
 
+drop trigger if exists votes_apply_delta on public.votes;
 create trigger votes_apply_delta
   after insert or update or delete on public.votes
   for each row execute function public.handle_vote_change();
@@ -345,7 +368,7 @@ create table if not exists public.bookmarks (
   primary key (user_id, post_id)
 );
 
-create index bookmarks_user_idx on public.bookmarks (user_id, created_at desc);
+create index if not exists bookmarks_user_idx on public.bookmarks (user_id, created_at desc);
 
 -- =============================================================================
 -- 7. ROOMMATE MATCHES (lightweight expression-of-interest)
@@ -361,7 +384,7 @@ create table if not exists public.roommate_pings (
   unique (from_user_id, to_user_id)
 );
 
-create index roommate_pings_to_idx on public.roommate_pings (to_user_id, created_at desc);
+create index if not exists roommate_pings_to_idx on public.roommate_pings (to_user_id, created_at desc);
 
 -- =============================================================================
 -- 8. ROW LEVEL SECURITY
@@ -374,6 +397,31 @@ alter table public.comments        enable row level security;
 alter table public.votes           enable row level security;
 alter table public.bookmarks       enable row level security;
 alter table public.roommate_pings  enable row level security;
+
+-- Idempotent re-apply (existing Supabase projects may already have these policies)
+drop policy if exists "profiles_select_all" on public.profiles;
+drop policy if exists "profiles_update_own" on public.profiles;
+drop policy if exists "profiles_insert_blocked" on public.profiles;
+drop policy if exists "neighborhoods_select_all" on public.neighborhoods;
+drop policy if exists "boards_select_all" on public.boards;
+drop policy if exists "posts_select_visible" on public.posts;
+drop policy if exists "posts_insert_authenticated" on public.posts;
+drop policy if exists "posts_update_own" on public.posts;
+drop policy if exists "posts_delete_own" on public.posts;
+drop policy if exists "comments_select_visible" on public.comments;
+drop policy if exists "comments_insert_authenticated" on public.comments;
+drop policy if exists "comments_update_own" on public.comments;
+drop policy if exists "comments_delete_own" on public.comments;
+drop policy if exists "votes_select_all" on public.votes;
+drop policy if exists "votes_insert_own" on public.votes;
+drop policy if exists "votes_update_own" on public.votes;
+drop policy if exists "votes_delete_own" on public.votes;
+drop policy if exists "bookmarks_select_own" on public.bookmarks;
+drop policy if exists "bookmarks_insert_own" on public.bookmarks;
+drop policy if exists "bookmarks_delete_own" on public.bookmarks;
+drop policy if exists "roommate_pings_select_party" on public.roommate_pings;
+drop policy if exists "roommate_pings_insert_sender" on public.roommate_pings;
+drop policy if exists "roommate_pings_update_recipient" on public.roommate_pings;
 
 -- profiles: world-readable; only the user can update their own row
 create policy "profiles_select_all"

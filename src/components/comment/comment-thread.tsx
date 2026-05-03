@@ -4,6 +4,10 @@ import { VoteButtons } from "@/components/post/vote-buttons";
 import { CommentForm } from "@/components/comment/comment-form";
 import { CommentReplyToggle } from "@/components/comment/comment-reply-toggle";
 import { timeAgo } from "@/lib/time";
+import {
+  publicAuthorLabel,
+  publicProfileSegment,
+} from "@/lib/public-profile";
 import type { CommentWithAuthor } from "@/types/database";
 
 export interface CommentNode extends CommentWithAuthor {
@@ -92,7 +96,7 @@ function CommentItem({
         <div className="flex flex-col items-center pt-1">
           <Avatar
             src={node.author_avatar_url}
-            name={node.author_display_name}
+            name={publicAuthorLabel(node.author_anonymous_handle)}
             size={28}
           />
           {node.children.length > 0 && (
@@ -105,10 +109,15 @@ function CommentItem({
         <div className="flex-1 min-w-0">
           <header className="flex items-center gap-1.5 text-[12px] text-slate">
             <Link
-              href={`/u/${node.author_username}`}
+              href={`/u/${encodeURIComponent(
+                publicProfileSegment(
+                  node.author_anonymous_handle,
+                  node.author_username,
+                ),
+              )}`}
               className="font-medium text-ink hover:text-violet"
             >
-              @{node.author_username}
+              {publicAuthorLabel(node.author_anonymous_handle)}
             </Link>
             <span className="text-ghost">·</span>
             <time dateTime={node.created_at}>

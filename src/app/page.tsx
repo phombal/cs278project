@@ -5,7 +5,7 @@ import { BoardsSidebar } from "@/components/sidebar/boards-sidebar";
 import { PostCard, type PostCardData } from "@/components/post/post-card";
 import { SortTabs, type SortKey } from "@/components/post/sort-tabs";
 import { Button } from "@/components/ui/button";
-import { getFeedUserState } from "@/lib/feed";
+import { getFeedUserState, type FeedUserState } from "@/lib/feed";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +49,17 @@ export default async function HomePage({
   const postRows = (posts ?? []) as PostCardData[];
 
   // Fetch the current user's votes + bookmarks on these posts in parallel.
-  const { voteMap, bookmarkSet } = user
+  const { voteMap, bookmarkSet } = (user
     ? await getFeedUserState(
         supabase,
         user.id,
         postRows.map((p) => p.id),
       )
-    : { voteMap: new Map<string, 1 | -1>(), bookmarkSet: new Set<string>() };
+    : {
+        voteMap: new Map<string, 1 | -1>(),
+        bookmarkSet: new Set<string>(),
+        helpfulSet: new Set<string>(),
+      }) satisfies FeedUserState;
 
   return (
     <main className="mx-auto max-w-[1240px] px-6 py-8">

@@ -1,7 +1,5 @@
 // Hand-written types for the Supabase schema.
-// In production, replace this file with the auto-generated types via:
-//   npm run db:types
-// (after the initial migration is applied to the project).
+// Run `npm run db:types` after migrations to regenerate.
 
 export type BoardKind =
   | "neighborhood"
@@ -11,9 +9,12 @@ export type BoardKind =
 
 export type PostType = "discussion" | "review" | "roommate" | "question";
 
+export type LeaseType = "short_term" | "long_term";
+
 export interface Profile {
   id: string;
   username: string;
+  anonymous_handle: string;
   display_name: string;
   bio: string | null;
   avatar_url: string | null;
@@ -55,17 +56,32 @@ export interface Post {
   post_type: PostType;
   title: string;
   body: string | null;
+  /** Legacy single rating; prefer rating_overall + dimensions for reviews */
   rating: number | null;
   rent_per_month_cents: number | null;
   lease_start: string | null;
   lease_end: string | null;
   building_or_address: string | null;
+  google_place_id: string | null;
+  address_formatted: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rating_landlord: number | null;
+  rating_noise: number | null;
+  rating_safety: number | null;
+  rating_value: number | null;
+  rating_commute: number | null;
+  rating_overall: number | null;
+  lease_type: LeaseType | null;
+  furnished: boolean | null;
+  affiliation: string | null;
   neighborhood_slug: string | null;
   would_recommend: boolean | null;
   upvotes: number;
   downvotes: number;
   score: number;
   comment_count: number;
+  helpful_count: number;
   is_pinned: boolean;
   is_locked: boolean;
   is_deleted: boolean;
@@ -75,6 +91,7 @@ export interface Post {
 
 export interface PostWithAuthor extends Post {
   author_username: string;
+  author_anonymous_handle: string;
   author_display_name: string;
   author_avatar_url: string | null;
   board_slug: string;
@@ -99,6 +116,7 @@ export interface Comment {
 
 export interface CommentWithAuthor extends Comment {
   author_username: string;
+  author_anonymous_handle: string;
   author_display_name: string;
   author_avatar_url: string | null;
 }
