@@ -22,8 +22,7 @@ export interface PostCardData {
   rating: number | null;
   rating_overall: number | null;
   rent_per_month_cents: number | null;
-  building_or_address: string | null;
-  address_formatted: string | null;
+  location_label_public: string | null;
   google_place_id: string | null;
   neighborhood_slug: string | null;
   lease_type: string | null;
@@ -74,7 +73,7 @@ export function PostCard({
   );
   const displayRating =
     post.rating_overall != null ? Number(post.rating_overall) : post.rating;
-  const addressLine = post.address_formatted ?? post.building_or_address;
+  const addressLine = post.location_label_public;
   const buildingHref =
     post.google_place_id &&
     `/building/${encodeURIComponent(post.google_place_id)}`;
@@ -160,7 +159,6 @@ export function PostCard({
                   {buildingHref ? (
                     <Link
                       href={buildingHref}
-                      onClick={(e) => e.stopPropagation()}
                       className="truncate text-violet hover:underline"
                     >
                       {addressLine}

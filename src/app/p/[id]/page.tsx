@@ -326,9 +326,9 @@ function ReviewMeta({
             }
           />
         )}
-        {(post.address_formatted || post.building_or_address) && (
+        {post.location_label_public && (
           <Stat
-            label="Address"
+            label="Location"
             icon={<MapPin size={12} />}
             value={
               buildingHref != null ? (
@@ -336,11 +336,11 @@ function ReviewMeta({
                   href={buildingHref}
                   className="text-violet hover:underline truncate block max-w-full"
                 >
-                  {post.address_formatted ?? post.building_or_address}
+                  {post.location_label_public}
                 </Link>
               ) : (
                 <span className="truncate block max-w-full">
-                  {post.address_formatted ?? post.building_or_address}
+                  {post.location_label_public}
                 </span>
               )
             }

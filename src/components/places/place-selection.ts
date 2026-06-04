@@ -1,6 +1,7 @@
 export interface PlaceSelection {
   placeId: string;
-  formattedAddress: string;
-  lat: number | null;
-  lng: number | null;
+  /** Full address — visible only to you while composing */
+  composeLabel: string;
+  /** Street + city — used for title suggestion; stored publicly after submit */
+  publicLocationLabel: string;
 }

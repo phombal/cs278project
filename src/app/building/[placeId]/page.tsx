@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPlaceDetails } from "@/lib/google-places";
+import { publicLabelFromPlaceDetails } from "@/lib/location-anonymize";
 import type { PostWithAuthor } from "@/types/database";
 import { BuildingReviewsPanel } from "@/components/building/building-reviews-panel";
 import { BuildingShareButton } from "@/components/building/building-share-button";
@@ -53,7 +54,9 @@ export async function generateMetadata({
   const n = posts.length;
   const place = await fetchPlaceDetails(placeId);
   const addr =
-    place?.formattedAddress || place?.displayName || "Building";
+    (place && publicLabelFromPlaceDetails(place)) ||
+    place?.displayName ||
+    "Building";
   const overall =
     n > 0
       ? posts.reduce((s, p) => s + (Number(p.rating_overall) || 0), 0) / n
@@ -124,9 +127,13 @@ export default async function BuildingPage({
     notFound();
   }
 
-  const titleText =
-    place?.displayName || place?.formattedAddress || "Building";
-  const addrLine = place?.formattedAddress ?? "";
+  const publicLabel =
+    (place && publicLabelFromPlaceDetails(place)) ||
+    posts.find((p) => p.location_label_public)?.location_label_public ||
+    null;
+
+  const titleText = publicLabel || place?.displayName || "Building";
+  const addrLine = publicLabel ?? "";
 
   const n = posts.length;
   const overallAvg =

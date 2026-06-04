@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LeaseType, PostType } from "@/types/database";
 import { uploadPhotosServer } from "@/lib/storage/photos";
+import { fetchPlaceDetails } from "@/lib/google-places";
+import { publicLabelFromPlaceDetails } from "@/lib/location-anonymize";
 
 function avgFive(
   a: number,
@@ -53,14 +55,18 @@ export async function createPost(formData: FormData): Promise<void> {
 
   if (postType === "review") {
     const placeId = String(formData.get("google_place_id") ?? "").trim();
-    const addressFormatted = String(
-      formData.get("address_formatted") ?? "",
-    ).trim();
-    const latRaw = formData.get("latitude");
-    const lngRaw = formData.get("longitude");
     if (!placeId) throw new Error("Choose an address from the suggestions.");
-    if (!addressFormatted)
-      throw new Error("Address is missing — pick a place again.");
+
+    const placeDetails = await fetchPlaceDetails(placeId);
+    if (!placeDetails) {
+      throw new Error("Could not verify that address. Pick it again from the list.");
+    }
+    const locationLabel = publicLabelFromPlaceDetails(placeDetails);
+    if (!locationLabel) {
+      throw new Error(
+        "Could not create a safe public location label. Try a nearby street address.",
+      );
+    }
 
     const rl = Number(formData.get("rating_landlord"));
     const rn = Number(formData.get("rating_noise"));
@@ -91,16 +97,11 @@ export async function createPost(formData: FormData): Promise<void> {
       throw new Error("Say whether the place was furnished.");
 
     insertRow.google_place_id = placeId;
-    insertRow.address_formatted = addressFormatted;
-    insertRow.building_or_address = addressFormatted;
-    if (latRaw != null && String(latRaw).trim() !== "") {
-      const lat = Number(latRaw);
-      if (Number.isFinite(lat)) insertRow.latitude = lat;
-    }
-    if (lngRaw != null && String(lngRaw).trim() !== "") {
-      const lng = Number(lngRaw);
-      if (Number.isFinite(lng)) insertRow.longitude = lng;
-    }
+    insertRow.location_label_public = locationLabel;
+    insertRow.address_formatted = null;
+    insertRow.building_or_address = null;
+    insertRow.latitude = null;
+    insertRow.longitude = null;
     insertRow.rating_landlord = rl;
     insertRow.rating_noise = rn;
     insertRow.rating_safety = rs;
