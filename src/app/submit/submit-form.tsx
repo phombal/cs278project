@@ -120,10 +120,18 @@ export function SubmitForm({
   defaultAddress?: string;
 }) {
   const titleRef = useRef<HTMLInputElement>(null);
-  const placeIdRef = useRef<HTMLInputElement>(null);
-  const addrRef = useRef<HTMLInputElement>(null);
-  const latRef = useRef<HTMLInputElement>(null);
-  const lngRef = useRef<HTMLInputElement>(null);
+
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSelection | null>(
+    () =>
+      defaultPlaceId?.trim() && defaultAddress?.trim()
+        ? {
+            placeId: defaultPlaceId.trim(),
+            formattedAddress: defaultAddress.trim(),
+            lat: null,
+            lng: null,
+          }
+        : null,
+  );
 
   const [board, setBoard] = useState(defaultBoard ?? boards[0]?.slug ?? "");
   const [postType, setPostType] = useState<PostType>(
@@ -144,22 +152,32 @@ export function SubmitForm({
       : null;
 
   const onPlaceSelected = useCallback((p: PlaceSelection) => {
-    if (placeIdRef.current) placeIdRef.current.value = p.placeId;
-    if (addrRef.current) addrRef.current.value = p.formattedAddress;
-    if (latRef.current)
-      latRef.current.value =
-        p.lat != null && Number.isFinite(p.lat) ? String(p.lat) : "";
-    if (lngRef.current)
-      lngRef.current.value =
-        p.lng != null && Number.isFinite(p.lng) ? String(p.lng) : "";
+    setSelectedPlace(p.placeId.trim() ? p : null);
   }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (postType === "review" && !selectedPlace?.placeId.trim()) {
+      setError("Pick an address from the suggestions list.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
     formData.set("post_type", postType);
     formData.set("board", board);
+
+    if (postType === "review" && selectedPlace) {
+      formData.set("google_place_id", selectedPlace.placeId);
+      formData.set("address_formatted", selectedPlace.formattedAddress);
+      if (selectedPlace.lat != null && Number.isFinite(selectedPlace.lat)) {
+        formData.set("latitude", String(selectedPlace.lat));
+      }
+      if (selectedPlace.lng != null && Number.isFinite(selectedPlace.lng)) {
+        formData.set("longitude", String(selectedPlace.lng));
+      }
+    }
 
     // Append photo files to FormData
     console.log('[CLIENT] Appending photos to FormData:', photoFiles.length);
@@ -289,24 +307,11 @@ export function SubmitForm({
 
       {postType === "review" && (
         <div className="rounded-[6px] border border-violet-washed bg-violet/5 p-5 flex flex-col gap-5">
-          <input
-            ref={placeIdRef}
-            type="hidden"
-            name="google_place_id"
-            defaultValue={defaultPlaceId ?? ""}
-          />
-          <input
-            ref={addrRef}
-            type="hidden"
-            name="address_formatted"
-            defaultValue={defaultAddress ?? ""}
-          />
-          <input ref={latRef} type="hidden" name="latitude" defaultValue="" />
-          <input ref={lngRef} type="hidden" name="longitude" defaultValue="" />
-
           <AddressAutocomplete
             onPlaceSelected={onPlaceSelected}
             titleInputRef={titleRef}
+            initialPlaceId={defaultPlaceId}
+            initialAddress={defaultAddress}
           />
 
           <div className="grid gap-4 sm:grid-cols-1">
