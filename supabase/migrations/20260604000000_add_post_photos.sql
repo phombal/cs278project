@@ -101,7 +101,7 @@ drop trigger if exists delete_post_photos_trigger on public.posts;
 create trigger delete_post_photos_trigger
   before delete on public.posts
   for each row
-  execute function public.delete_post_photos();
+  execute function public.delete_post_photos(); 
 
 -- =============================================================================
 -- Recreate posts_with_author view to include photos column
