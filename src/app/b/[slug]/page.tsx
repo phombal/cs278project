@@ -185,6 +185,7 @@ export default async function BoardPage({
                   authed={!!user}
                   myVote={voteMap.get(p.id) ?? 0}
                   myBookmarked={bookmarkSet.has(p.id)}
+                  currentUserId={user?.id ?? null}
                   showBoard={false}
                 />
               ))}

@@ -151,8 +151,18 @@ export default async function PostPage({
               authed={!!user}
             />
           </div>
-          <div className="flex-1 min-w-0 p-5">
-            <header className="flex items-center gap-1.5 text-[12px] text-slate flex-wrap">
+          <div className="relative flex-1 min-w-0 p-5">
+            {user && user.id === post.author_id && (
+              <DeletePostButton
+                postId={post.id}
+                postTitle={post.title}
+                redirectOnSuccess="/"
+                className="absolute top-4 right-4"
+              />
+            )}
+            <header
+              className={`flex items-center gap-1.5 text-[12px] text-slate flex-wrap ${user?.id === post.author_id ? "pr-10" : ""}`}
+            >
               <Link
                 href={`/b/${post.board_slug}`}
                 className="font-medium text-ink hover:text-violet"
@@ -218,16 +228,13 @@ export default async function PostPage({
                 authed={!!user}
               />
               {user && user.id === post.author_id && (
-                <>
-                  <Link
-                    href={`/p/${post.id}/edit`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] border border-stone hover:border-violet hover:text-violet transition-colors"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" strokeWidth={2} />
-                    Edit Post
-                  </Link>
-                  <DeletePostButton postId={post.id} postTitle={post.title} />
-                </>
+                <Link
+                  href={`/p/${post.id}/edit`}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] border border-stone hover:border-violet hover:text-violet transition-colors"
+                >
+                  <Edit3 className="h-3.5 w-3.5" strokeWidth={2} />
+                  Edit Post
+                </Link>
               )}
             </footer>
           </div>
@@ -265,6 +272,7 @@ export default async function PostPage({
           postId={post.id}
           authed={!!user}
           postLocked={post.is_locked}
+          currentUserId={user?.id ?? null}
         />
       </section>
     </main>

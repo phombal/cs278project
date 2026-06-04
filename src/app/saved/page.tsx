@@ -90,6 +90,7 @@ export default async function SavedPage() {
               authed
               myVote={voteMap.get(p.id) ?? 0}
               myBookmarked={bookmarkSet.has(p.id)}
+              currentUserId={user.id}
             />
           ))}
         </div>

@@ -4,6 +4,7 @@ import { MessageSquare, Star, Home, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { VoteButtons } from "@/components/post/vote-buttons";
 import { SaveButton } from "@/components/post/save-button";
+import { DeletePostButton } from "@/components/post/delete-post-button";
 import { timeAgo } from "@/lib/time";
 import { formatRent, formatScore } from "@/lib/utils";
 import {
@@ -14,6 +15,7 @@ import type { PostType } from "@/types/database";
 
 export interface PostCardData {
   id: string;
+  author_id: string;
   title: string;
   body: string | null;
   post_type: PostType;
@@ -55,13 +57,16 @@ export function PostCard({
   myBookmarked = false,
   authed,
   showBoard = true,
+  currentUserId = null,
 }: {
   post: PostCardData;
   myVote?: 1 | -1 | 0;
   myBookmarked?: boolean;
   authed: boolean;
   showBoard?: boolean;
+  currentUserId?: string | null;
 }) {
+  const isOwner = !!currentUserId && currentUserId === post.author_id;
   const authorLabel = publicAuthorLabel(post.author_anonymous_handle);
   const profileSeg = publicProfileSegment(
     post.author_anonymous_handle,
@@ -87,8 +92,17 @@ export function PostCard({
           />
         </div>
 
-        <div className="flex-1 min-w-0 p-4">
-          <header className="flex items-center gap-1.5 text-[12px] text-slate flex-wrap">
+        <div className="relative flex-1 min-w-0 p-4">
+          {isOwner && (
+            <DeletePostButton
+              postId={post.id}
+              postTitle={post.title}
+              className="absolute top-3 right-3"
+            />
+          )}
+          <header
+            className={`flex items-center gap-1.5 text-[12px] text-slate flex-wrap ${isOwner ? "pr-10" : ""}`}
+          >
             {showBoard && (
               <>
                 <Link
