@@ -135,6 +135,7 @@ export default async function UserProfilePage({
               authed={!!viewer}
               myVote={voteMap.get(p.id) ?? 0}
               myBookmarked={bookmarkSet.has(p.id)}
+              currentUserId={viewer?.id ?? null}
             />
           ))}
         </div>

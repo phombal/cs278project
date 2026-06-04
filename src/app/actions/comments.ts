@@ -35,3 +35,25 @@ export async function createComment(args: {
   revalidatePath(`/p/${args.postId}`);
   return { ok: true, id: data.id };
 }
+
+export async function deleteComment(
+  commentId: string,
+  postId: string,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+
+  const { error } = await supabase
+    .from("comments")
+    .update({ is_deleted: true, body: "[removed]" })
+    .eq("id", commentId)
+    .eq("author_id", user.id);
+
+  if (error) return { ok: false };
+
+  revalidatePath(`/p/${postId}`);
+  return { ok: true };
+}

@@ -3,6 +3,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { VoteButtons } from "@/components/post/vote-buttons";
 import { CommentForm } from "@/components/comment/comment-form";
 import { CommentReplyToggle } from "@/components/comment/comment-reply-toggle";
+import { DeleteCommentButton } from "@/components/comment/delete-comment-button";
 import { timeAgo } from "@/lib/time";
 import {
   publicAuthorLabel,
@@ -50,11 +51,13 @@ export function CommentThread({
   postId,
   authed,
   postLocked,
+  currentUserId = null,
 }: {
   nodes: CommentNode[];
   postId: string;
   authed: boolean;
   postLocked: boolean;
+  currentUserId?: string | null;
 }) {
   if (nodes.length === 0) {
     return (
@@ -72,6 +75,7 @@ export function CommentThread({
             postId={postId}
             authed={authed}
             postLocked={postLocked}
+            currentUserId={currentUserId}
           />
         </li>
       ))}
@@ -84,12 +88,17 @@ function CommentItem({
   postId,
   authed,
   postLocked,
+  currentUserId,
 }: {
   node: CommentNode;
   postId: string;
   authed: boolean;
   postLocked: boolean;
+  currentUserId: string | null;
 }) {
+  const isOwner =
+    !!currentUserId && currentUserId === node.author_id && !node.is_deleted;
+
   return (
     <div>
       <div className="flex gap-3">
@@ -106,8 +115,18 @@ function CommentItem({
             />
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <header className="flex items-center gap-1.5 text-[12px] text-slate">
+        <div className="relative flex-1 min-w-0">
+          {isOwner && (
+            <DeleteCommentButton
+              commentId={node.id}
+              postId={postId}
+              body={node.body}
+              className="absolute top-0 right-0"
+            />
+          )}
+          <header
+            className={`flex items-center gap-1.5 text-[12px] text-slate ${isOwner ? "pr-10" : ""}`}
+          >
             <Link
               href={`/u/${encodeURIComponent(
                 publicProfileSegment(
@@ -166,6 +185,7 @@ function CommentItem({
                 postId={postId}
                 authed={authed}
                 postLocked={postLocked}
+                currentUserId={currentUserId}
               />
             </li>
           ))}

@@ -85,6 +85,7 @@ export default async function HomePage({
                   authed={!!user}
                   myVote={voteMap.get(p.id) ?? 0}
                   myBookmarked={bookmarkSet.has(p.id)}
+                  currentUserId={user?.id ?? null}
                 />
               ))}
             </div>
