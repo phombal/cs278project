@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pin, MapPin, Users, CalendarRange } from "lucide-react";
+import { Pin, MapPin, Users, CalendarRange, ScrollText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { BoardKind } from "@/types/database";
 
@@ -20,8 +20,10 @@ const kindIcon: Record<BoardKind, typeof Pin> = {
 
 export async function BoardsSidebar({
   activeSlug,
+  showRules,
 }: {
   activeSlug?: string;
+  showRules?: boolean;
 }) {
   const supabase = await createClient();
   const { data: boards } = await supabase
@@ -43,6 +45,18 @@ export async function BoardsSidebar({
           items={pinned}
           activeSlug={activeSlug}
         />
+        <Link
+          href={showRules ? "/" : "/?view=rules"}
+          className={
+            "flex items-center gap-2 rounded-[4px] px-3 py-1.5 text-[14px] transition-colors " +
+            (showRules
+              ? "bg-violet/10 text-violet"
+              : "text-ink hover:bg-porcelain")
+          }
+        >
+          <ScrollText size={14} className={showRules ? "text-violet" : "text-slate"} />
+          <span>Community Rules</span>
+        </Link>
         <SectionList
           label="Neighborhoods"
           items={neighborhoods}

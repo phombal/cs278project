@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Home as HomeIcon, Users, Sparkles } from "lucide-react";
+import { ArrowRight, Home as HomeIcon, Users, Sparkles, ScrollText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BoardsSidebar } from "@/components/sidebar/boards-sidebar";
 import { PostCard, type PostCardData } from "@/components/post/post-card";
@@ -20,6 +20,7 @@ const sortToOrder: Record<
 
 interface SearchParams {
   sort?: string;
+  view?: string;
 }
 
 export default async function HomePage({
@@ -27,9 +28,10 @@ export default async function HomePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { sort: rawSort } = await searchParams;
+  const { sort: rawSort, view } = await searchParams;
   const sort: SortKey =
     rawSort === "new" || rawSort === "top" ? rawSort : "hot";
+  const showRules = view === "rules";
 
   const supabase = await createClient();
   const {
@@ -65,30 +67,36 @@ export default async function HomePage({
     <main className="mx-auto max-w-[1240px] px-6 py-8">
       <Hero />
       <div className="mt-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-8">
-        <BoardsSidebar />
+        <BoardsSidebar showRules={showRules} />
         <div className="min-w-0">
-          <div className="mb-4 flex items-center justify-between">
-            <h1 className="text-[26px] font-light tracking-tight">
-              Latest from across SF
-            </h1>
-            <SortTabs active={sort} basePath="/" />
-          </div>
-
-          {postRows.length === 0 ? (
-            <EmptyState />
+          {showRules ? (
+            <CommunityRules />
           ) : (
-            <div className="flex flex-col gap-3">
-              {postRows.map((p) => (
-                <PostCard
-                  key={p.id}
-                  post={p}
-                  authed={!!user}
-                  myVote={voteMap.get(p.id) ?? 0}
-                  myBookmarked={bookmarkSet.has(p.id)}
-                  currentUserId={user?.id ?? null}
-                />
-              ))}
-            </div>
+            <>
+              <div className="mb-4 flex items-center justify-between">
+                <h1 className="text-[26px] font-light tracking-tight">
+                  Latest from across SF
+                </h1>
+                <SortTabs active={sort} basePath="/" />
+              </div>
+
+              {postRows.length === 0 ? (
+                <EmptyState />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {postRows.map((p) => (
+                    <PostCard
+                      key={p.id}
+                      post={p}
+                      authed={!!user}
+                      myVote={voteMap.get(p.id) ?? 0}
+                      myBookmarked={bookmarkSet.has(p.id)}
+                      currentUserId={user?.id ?? null}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -137,6 +145,65 @@ function Hero() {
         </Link>
       </div>
     </section>
+  );
+}
+
+function CommunityRules() {
+  const rules = [
+    {
+      number: 1,
+      title: "Be honest and accurate",
+      body: "Share genuine experiences. Don't post fake reviews, inflate ratings, or spread misinformation about buildings, landlords, or neighborhoods.",
+    },
+    {
+      number: 2,
+      title: "Respect privacy",
+      body: "Don't share other people's personal information — full names, contact details, exact unit numbers, or anything that could identify a private individual without consent.",
+    },
+    {
+      number: 3,
+      title: "Keep it civil",
+      body: "Critique housing and landlords, not people. No harassment, hate speech, or personal attacks. Disagreements are fine; hostility is not.",
+    },
+    {
+      number: 4,
+      title: "No spam or self-promotion",
+      body: "Don't post listings, referral links, or ads disguised as reviews. Landlords and property managers must disclose their affiliation.",
+    },
+    {
+      number: 5,
+      title: "Stay on topic",
+      body: "Posts should relate to SF housing — rentals, neighborhoods, roommates, building conditions, or moving logistics. Off-topic threads may be removed.",
+    },
+  ];
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center gap-3">
+        <ScrollText size={22} className="text-violet" />
+        <h1 className="text-[26px] font-light tracking-tight">Community Rules</h1>
+      </div>
+      <p className="mb-6 text-[15px] text-slate leading-relaxed">
+        SF Housing is a community for honest, helpful information about renting in San Francisco.
+        These rules keep it useful and safe for everyone.
+      </p>
+      <div className="flex flex-col gap-3">
+        {rules.map((rule) => (
+          <div
+            key={rule.number}
+            className="rounded-[6px] border border-stone bg-white px-5 py-4 flex gap-4"
+          >
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet/10 text-[12px] font-semibold text-violet">
+              {rule.number}
+            </span>
+            <div>
+              <p className="text-[15px] font-medium text-ink">{rule.title}</p>
+              <p className="mt-1 text-[14px] text-slate leading-relaxed">{rule.body}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
