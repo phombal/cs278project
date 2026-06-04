@@ -18,6 +18,7 @@ import {
   AddressAutocomplete,
   type PlaceSelection,
 } from "@/components/places/address-autocomplete";
+import { PhotoUpload } from "@/components/ui/photo-upload";
 
 interface BoardOption {
   slug: string;
@@ -135,6 +136,7 @@ export function SubmitForm({
   const [rc, setRc] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
   const overall =
     rl > 0 && rn > 0 && rs > 0 && rv > 0 && rc > 0
@@ -158,6 +160,16 @@ export function SubmitForm({
     const formData = new FormData(e.currentTarget);
     formData.set("post_type", postType);
     formData.set("board", board);
+
+    // Append photo files to FormData
+    console.log('[CLIENT] Appending photos to FormData:', photoFiles.length);
+    photoFiles.forEach((file, idx) => {
+      console.log(`[CLIENT] photo_${idx}:`, file.name, file.size, file.type);
+      formData.append(`photo_${idx}`, file);
+    });
+
+    // Debug: Log all FormData keys
+    console.log('[CLIENT] FormData keys:', Array.from(formData.keys()));
 
     startTransition(async () => {
       try {
@@ -267,6 +279,12 @@ export function SubmitForm({
             ? "Honest detail helps the next person decide."
             : "Keep it useful. Protect personal addresses unless this is a public review."}
         </FieldHelp>
+      </div>
+
+      {/* Photo upload */}
+      <div>
+        <Label>Photos (optional)</Label>
+        <PhotoUpload onChange={setPhotoFiles} />
       </div>
 
       {postType === "review" && (

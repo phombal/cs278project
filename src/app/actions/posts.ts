@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { LeaseType, PostType } from "@/types/database";
+import { uploadPhotosServer } from "@/lib/storage/photos";
 
 function avgFive(
   a: number,
@@ -134,6 +135,57 @@ export async function createPost(formData: FormData): Promise<void> {
       insertRow.would_recommend = String(recommend) === "true";
   }
 
+  // Handle photo uploads
+  const photoFiles: File[] = [];
+  const photoKeys = Array.from(formData.keys()).filter(key => key.startsWith("photo_"));
+  
+  console.log('[createPost] Found photo keys:', photoKeys);
+  
+  for (const key of photoKeys) {
+    const file = formData.get(key);
+    console.log('[createPost] Checking key:', key, 'Type:', typeof file, 'Instance:', file instanceof File, 'Constructor:', file?.constructor?.name);
+    
+    // Check if it's a File/Blob with content
+    if (file && typeof file === 'object' && 'size' in file && 'name' in file) {
+      const fileObj = file as File;
+      if (fileObj.size > 0) {
+        console.log('[createPost] Adding photo:', fileObj.name, fileObj.size);
+        photoFiles.push(fileObj);
+      } else {
+        console.log('[createPost] Skipping empty file:', fileObj.name);
+      }
+    } else {
+      console.log('[createPost] Not a file:', typeof file);
+    }
+  }
+
+  console.log('[createPost] Total photos to upload:', photoFiles.length);
+
+  let photoUrls: string[] = [];
+  if (photoFiles.length > 0) {
+    try {
+      const { urls, errors } = await uploadPhotosServer(photoFiles, user.id);
+      photoUrls = urls;
+      
+      console.log('[createPost] Upload complete. URLs:', urls.length, 'Errors:', errors.length);
+      
+      // Log errors but don't fail the post creation
+      if (errors.length > 0) {
+        console.error('Some photos failed to upload:', errors);
+      }
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      // Continue with post creation even if photos fail
+    }
+  }
+
+  // Add photos to insert row
+  if (photoUrls.length > 0) {
+    insertRow.photos = photoUrls;
+  }
+
+  console.log('[createPost] Final insertRow.photos:', insertRow.photos);
+
   const { data: created, error } = await supabase
     .from("posts")
     .insert(insertRow)
@@ -145,6 +197,90 @@ export async function createPost(formData: FormData): Promise<void> {
   revalidatePath(`/b/${boardSlug}`);
   revalidatePath("/");
   redirect(`/p/${created.id}`);
+}
+
+export async function updatePost(
+  postId: string,
+  formData: FormData
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Verify user owns this post
+  const { data: existingPost } = await supabase
+    .from("posts")
+    .select("id, author_id, photos")
+    .eq("id", postId)
+    .eq("author_id", user.id)
+    .single();
+
+  if (!existingPost) {
+    throw new Error("Post not found or you don't have permission to edit it.");
+  }
+
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim() || null;
+
+  if (title.length < 5) throw new Error("Title must be at least 5 characters.");
+  if (title.length > 300) throw new Error("Title is too long.");
+
+  const updateRow: Record<string, unknown> = {
+    title,
+    body,
+  };
+
+  // Handle photo uploads for new photos
+  const photoFiles: File[] = [];
+  const photoKeys = Array.from(formData.keys()).filter((key) =>
+    key.startsWith("photo_")
+  );
+
+  for (const key of photoKeys) {
+    const file = formData.get(key);
+    if (file instanceof File && file.size > 0) {
+      photoFiles.push(file);
+    }
+  }
+
+  // Get existing photos that should be kept
+  const keptPhotos = formData.getAll("kept_photo").map(String);
+  let allPhotos = [...keptPhotos];
+
+  // Upload new photos
+  if (photoFiles.length > 0) {
+    try {
+      const { urls, errors } = await uploadPhotosServer(photoFiles, user.id);
+      allPhotos.push(...urls);
+
+      if (errors.length > 0) {
+        console.error("Some photos failed to upload:", errors);
+      }
+    } catch (err) {
+      console.error("Photo upload failed:", err);
+    }
+  }
+
+  updateRow.photos = allPhotos;
+
+  console.log('[updatePost] Final updateRow.photos:', updateRow.photos);
+  console.log('[updatePost] Updating post:', postId);
+
+  const { error } = await supabase
+    .from("posts")
+    .update(updateRow)
+    .eq("id", postId)
+    .eq("author_id", user.id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/p/${postId}`);
+  revalidatePath("/");
+  redirect(`/p/${postId}`);
 }
 
 export async function deletePost(postId: string): Promise<{ ok: boolean }> {

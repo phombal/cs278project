@@ -56,6 +56,7 @@ export interface Post {
   post_type: PostType;
   title: string;
   body: string | null;
+  photos: string[] | null;
   /** Legacy single rating; prefer rating_overall + dimensions for reviews */
   rating: number | null;
   rent_per_month_cents: number | null;

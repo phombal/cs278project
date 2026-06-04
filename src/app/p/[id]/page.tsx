@@ -6,11 +6,14 @@ import {
   MapPin,
   Calendar,
   ChevronLeft,
+  Edit3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { VoteButtons } from "@/components/post/vote-buttons";
 import { SaveButton } from "@/components/post/save-button";
 import { ReviewHelpfulButton } from "@/components/post/review-helpful-button";
+import { PhotoGallery } from "@/components/post/photo-gallery";
+import { DeletePostButton } from "@/components/post/delete-post-button";
 import {
   CommentThread,
   buildCommentTree,
@@ -190,6 +193,12 @@ export default async function PostPage({
               </div>
             )}
 
+            {post.photos && post.photos.length > 0 && (
+              <div className="mt-4">
+                <PhotoGallery photos={post.photos} />
+              </div>
+            )}
+
             {post.post_type === "review" && (
               <div className="mt-5">
                 <ReviewHelpfulButton
@@ -202,12 +211,24 @@ export default async function PostPage({
               </div>
             )}
 
-            <footer className="mt-5 flex items-center gap-3 text-[12px] text-slate">
+            <footer className="mt-5 flex items-center gap-3 text-[12px] text-slate flex-wrap">
               <SaveButton
                 postId={post.id}
                 initialSaved={myBookmarked}
                 authed={!!user}
               />
+              {user && user.id === post.author_id && (
+                <>
+                  <Link
+                    href={`/p/${post.id}/edit`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] border border-stone hover:border-violet hover:text-violet transition-colors"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" strokeWidth={2} />
+                    Edit Post
+                  </Link>
+                  <DeletePostButton postId={post.id} postTitle={post.title} />
+                </>
+              )}
             </footer>
           </div>
         </div>

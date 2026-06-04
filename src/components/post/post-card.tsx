@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MessageSquare, Star, Home, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { VoteButtons } from "@/components/post/vote-buttons";
@@ -38,6 +39,7 @@ export interface PostCardData {
   author_display_name: string;
   board_slug: string;
   board_name: string;
+  photos: string[] | null;
 }
 
 const postTypeLabel: Record<PostType, string> = {
@@ -172,11 +174,28 @@ export function PostCard({
             </div>
           )}
 
-          {post.body && (
-            <p className="mt-2 text-[14px] text-slate line-clamp-2 leading-relaxed">
-              {post.body}
-            </p>
-          )}
+          <div className="flex gap-3 items-start">
+            <div className="flex-1 min-w-0">
+              {post.body && (
+                <p className="mt-2 text-[14px] text-slate line-clamp-2 leading-relaxed">
+                  {post.body}
+                </p>
+              )}
+            </div>
+            {post.photos && post.photos.length > 0 && (
+              <Link href={`/p/${post.id}`} className="flex-shrink-0 mt-2">
+                <div className="relative w-20 h-20 rounded-[4px] overflow-hidden border border-stone hover:border-violet transition-colors">
+                  <Image
+                    src={post.photos[0]}
+                    alt="Post thumbnail"
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                </div>
+              </Link>
+            )}
+          </div>
 
           <footer className="mt-3 flex items-center gap-3 text-[12px] text-slate">
             <Badge variant="outline">{postTypeLabel[post.post_type]}</Badge>
