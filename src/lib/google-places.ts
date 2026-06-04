@@ -1,6 +1,13 @@
+export type PlaceAddressComponent = {
+  longText?: string;
+  shortText?: string;
+  types?: string[];
+};
+
 export type PlaceDetailsResult = {
   displayName: string;
   formattedAddress: string;
+  addressComponents: PlaceAddressComponent[];
   latitude: number | null;
   longitude: number | null;
 };
@@ -99,7 +106,7 @@ export async function fetchPlaceDetails(
   const res = await fetch(url, {
     headers: {
       "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": "displayName,formattedAddress,location",
+      "X-Goog-FieldMask": "displayName,formattedAddress,addressComponents,location",
     },
     next: { revalidate: 3600 },
   });
@@ -108,12 +115,14 @@ export async function fetchPlaceDetails(
   const data = (await res.json()) as {
     displayName?: { text?: string };
     formattedAddress?: string;
+    addressComponents?: PlaceAddressComponent[];
     location?: { latitude?: number; longitude?: number };
   };
 
   return {
     displayName: data.displayName?.text ?? "",
     formattedAddress: data.formattedAddress ?? "",
+    addressComponents: data.addressComponents ?? [],
     latitude: data.location?.latitude ?? null,
     longitude: data.location?.longitude ?? null,
   };

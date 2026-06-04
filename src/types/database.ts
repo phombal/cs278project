@@ -64,6 +64,8 @@ export interface Post {
   lease_end: string | null;
   building_or_address: string | null;
   google_place_id: string | null;
+  /** Street + city shown publicly; no street number or unit */
+  location_label_public: string | null;
   address_formatted: string | null;
   latitude: number | null;
   longitude: number | null;

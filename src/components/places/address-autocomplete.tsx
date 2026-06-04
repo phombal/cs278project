@@ -15,6 +15,31 @@ type Suggestion = {
   secondaryText: string;
 };
 
+async function resolvePlaceSelection(
+  placeId: string,
+  composeFallback: string,
+): Promise<PlaceSelection | null> {
+  try {
+    const res = await fetch(`/api/places/${encodeURIComponent(placeId)}`);
+    if (res.ok) {
+      const data = (await res.json()) as {
+        publicLocationLabel?: string;
+      };
+      const publicLocationLabel = data.publicLocationLabel?.trim();
+      if (publicLocationLabel) {
+        return {
+          placeId,
+          composeLabel: composeFallback,
+          publicLocationLabel,
+        };
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+  return null;
+}
+
 export function AddressAutocomplete({
   onPlaceSelected,
   titleInputRef,
@@ -40,7 +65,7 @@ export function AddressAutocomplete({
 
   const applySelection = useCallback(
     (p: PlaceSelection) => {
-      if (!p.placeId.trim()) {
+      if (!p.placeId.trim() || !p.publicLocationLabel.trim()) {
         setApiError(
           "Could not link this address to a building. Try another suggestion.",
         );
@@ -48,13 +73,13 @@ export function AddressAutocomplete({
       }
       setApiError(null);
       setSelected(p);
-      setQuery(p.formattedAddress);
+      setQuery(p.publicLocationLabel);
       setSuggestions([]);
       setOpen(false);
       setActiveIndex(-1);
       onPlaceSelected(p);
       if (titleInputRef?.current && !titleInputRef.current.value.trim()) {
-        titleInputRef.current.value = p.formattedAddress;
+        titleInputRef.current.value = p.publicLocationLabel;
       }
     },
     [onPlaceSelected, titleInputRef],
@@ -64,60 +89,34 @@ export function AddressAutocomplete({
     setSelected(null);
     onPlaceSelected({
       placeId: "",
-      formattedAddress: "",
-      lat: null,
-      lng: null,
+      composeLabel: "",
+      publicLocationLabel: "",
     });
   }, [onPlaceSelected]);
 
-  // Prefill once when arriving from a building page (?placeId=…&address=…)
   const prefilledRef = useRef(false);
   useEffect(() => {
     const pid = initialPlaceId?.trim();
     if (!pid || prefilledRef.current) return;
     prefilledRef.current = true;
 
-    const formatted = initialAddress?.trim() ?? "";
-    if (formatted) {
-      applySelection({
-        placeId: pid,
-        formattedAddress: formatted,
-        lat: null,
-        lng: null,
-      });
-      return;
-    }
-
     void (async () => {
-      try {
-        const res = await fetch(`/api/places/${encodeURIComponent(pid)}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          formattedAddress?: string;
-          latitude?: number | null;
-          longitude?: number | null;
-        };
-        const addr = data.formattedAddress?.trim();
-        if (!addr) return;
-        applySelection({
-          placeId: pid,
-          formattedAddress: addr,
-          lat: data.latitude ?? null,
-          lng: data.longitude ?? null,
-        });
-      } catch {
-        /* ignore */
+      const resolved = await resolvePlaceSelection(
+        pid,
+        initialAddress?.trim() ?? "",
+      );
+      if (resolved) {
+        applySelection(resolved);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
   }, []);
 
-  // Debounced autocomplete
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const trimmed = query.trim();
-    if (selected && trimmed === selected.formattedAddress) {
+    if (selected && trimmed === selected.publicLocationLabel) {
       setSuggestions([]);
       setOpen(false);
       return;
@@ -171,7 +170,6 @@ export function AddressAutocomplete({
     };
   }, [query, selected]);
 
-  // Close list on outside click
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!wrapperRef.current?.contains(e.target as Node)) {
@@ -185,37 +183,16 @@ export function AddressAutocomplete({
   async function pickSuggestion(s: Suggestion) {
     setLoading(true);
     setApiError(null);
+    const composeFallback = s.description || s.mainText;
     try {
-      const res = await fetch(`/api/places/${encodeURIComponent(s.placeId)}`);
-      if (res.ok) {
-        const data = (await res.json()) as {
-          formattedAddress?: string;
-          latitude?: number | null;
-          longitude?: number | null;
-        };
-        const formattedAddress =
-          data.formattedAddress?.trim() || s.description || s.mainText;
-        applySelection({
-          placeId: s.placeId,
-          formattedAddress,
-          lat: data.latitude ?? null,
-          lng: data.longitude ?? null,
-        });
+      const resolved = await resolvePlaceSelection(s.placeId, composeFallback);
+      if (resolved) {
+        applySelection(resolved);
         return;
       }
-      applySelection({
-        placeId: s.placeId,
-        formattedAddress: s.description || s.mainText,
-        lat: null,
-        lng: null,
-      });
-    } catch {
-      applySelection({
-        placeId: s.placeId,
-        formattedAddress: s.description || s.mainText,
-        lat: null,
-        lng: null,
-      });
+      setApiError(
+        "Could not create a safe public location label. Try another address.",
+      );
     } finally {
       setLoading(false);
     }
@@ -319,8 +296,11 @@ export function AddressAutocomplete({
             ✓
           </span>
           <span className="min-w-0 flex-1">
-            Selected:{" "}
-            <span className="text-ink">{selected.formattedAddress}</span>
+            Publicly shown as{" "}
+            <span className="text-ink">{selected.publicLocationLabel}</span>
+            <span className="block mt-0.5 text-ghost">
+              Your street number is never posted.
+            </span>
           </span>
           <button
             type="button"
@@ -337,7 +317,8 @@ export function AddressAutocomplete({
       )}
 
       <FieldHelp>
-        Pick an address from the list so your review links to the right building.
+        Search with your full address, then pick a match. Only street and city
+        are shown publicly—not your street number.
       </FieldHelp>
 
       {apiError && (

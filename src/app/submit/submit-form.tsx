@@ -121,16 +121,8 @@ export function SubmitForm({
 }) {
   const titleRef = useRef<HTMLInputElement>(null);
 
-  const [selectedPlace, setSelectedPlace] = useState<PlaceSelection | null>(
-    () =>
-      defaultPlaceId?.trim() && defaultAddress?.trim()
-        ? {
-            placeId: defaultPlaceId.trim(),
-            formattedAddress: defaultAddress.trim(),
-            lat: null,
-            lng: null,
-          }
-        : null,
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(
+    () => defaultPlaceId?.trim() ?? null,
   );
 
   const [board, setBoard] = useState(defaultBoard ?? boards[0]?.slug ?? "");
@@ -152,14 +144,14 @@ export function SubmitForm({
       : null;
 
   const onPlaceSelected = useCallback((p: PlaceSelection) => {
-    setSelectedPlace(p.placeId.trim() ? p : null);
+    setSelectedPlaceId(p.placeId.trim() || null);
   }, []);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (postType === "review" && !selectedPlace?.placeId.trim()) {
+    if (postType === "review" && !selectedPlaceId?.trim()) {
       setError("Pick an address from the suggestions list.");
       return;
     }
@@ -168,15 +160,8 @@ export function SubmitForm({
     formData.set("post_type", postType);
     formData.set("board", board);
 
-    if (postType === "review" && selectedPlace) {
-      formData.set("google_place_id", selectedPlace.placeId);
-      formData.set("address_formatted", selectedPlace.formattedAddress);
-      if (selectedPlace.lat != null && Number.isFinite(selectedPlace.lat)) {
-        formData.set("latitude", String(selectedPlace.lat));
-      }
-      if (selectedPlace.lng != null && Number.isFinite(selectedPlace.lng)) {
-        formData.set("longitude", String(selectedPlace.lng));
-      }
+    if (postType === "review" && selectedPlaceId) {
+      formData.set("google_place_id", selectedPlaceId);
     }
 
     // Append photo files to FormData
@@ -264,12 +249,9 @@ export function SubmitForm({
           required
           minLength={5}
           maxLength={300}
-          defaultValue={
-            defaultAddress && defaultAddress.length >= 5 ? defaultAddress : undefined
-          }
           placeholder={
             postType === "review"
-              ? "Filled from address — you can edit"
+              ? "Filled from location — you can edit"
               : "Be specific. What would scrolling users care about?"
           }
         />
